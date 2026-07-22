@@ -37,6 +37,15 @@ export interface PermanentSelections {
   'interruption-recovery': OptionCode;
 }
 
+export interface MvpSessionV1 {
+  readonly schemaVersion: 1;
+  readonly flow: 'questionnaire';
+  readonly startedAtIso: string;
+  readonly updatedAtIso: string;
+  readonly permanentSelections: Partial<PermanentSelections>;
+  readonly capacity: CapacityId | null;
+}
+
 export interface MvpQuestionOptionDefinition {
   readonly code: OptionCode;
   readonly optionId: PermanentOptionId;
