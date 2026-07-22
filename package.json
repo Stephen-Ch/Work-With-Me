@@ -5,7 +5,7 @@
     "ng": "ng",
     "start": "ng serve",
     "start:4201": "ng serve --port 4201",
-    "serve:dist": "npx --yes http-server dist/working-with-me/browser -a 127.0.0.1 -p 8080 -c-1",
+    "serve:dist": "npx --yes http-server dist/work-with-me/browser -a 127.0.0.1 -p 8080 -c-1",
     "e2e:dist": "npm run build && npx playwright test --config=playwright.dist.config.ts",
     "content:build": "node scripts/content-build.js",
     "content:lint": "node scripts/content-lint.js",
