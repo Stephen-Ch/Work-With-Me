@@ -1,0 +1,156 @@
+{
+  "schemaVersion": "mvp-content.v1",
+  "sharedOpening": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.",
+  "sharedClosing": "My explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result.",
+  "questionOrder": [
+    "starting-work",
+    "information-load",
+    "decision-support",
+    "side-topics",
+    "interruption-recovery"
+  ],
+  "questions": [
+    {
+      "id": "starting-work",
+      "title": "Starting unclear or complex work",
+      "prompt": "When a task feels unclear or complex, what helps most?",
+      "options": [
+        {
+          "code": "A",
+          "optionId": "starting-work:A",
+          "answerText": "Give me one clear first step.",
+          "moduleText": "Give one clear first step before any deeper explanation."
+        },
+        {
+          "code": "B",
+          "optionId": "starting-work:B",
+          "answerText": "Break it into a short ordered plan.",
+          "moduleText": "Break the work into a short ordered plan with concrete actions."
+        },
+        {
+          "code": "C",
+          "optionId": "starting-work:C",
+          "answerText": "Give me the broader picture, then recommend where to start.",
+          "moduleText": "Give the broader picture first, then recommend where to start."
+        }
+      ]
+    },
+    {
+      "id": "information-load",
+      "title": "Managing information load",
+      "prompt": "When information is piling up, what should the assistant do?",
+      "options": [
+        {
+          "code": "A",
+          "optionId": "information-load:A",
+          "answerText": "Keep it brief and focus on the essentials.",
+          "moduleText": "Keep responses brief and focus on essentials unless I ask for more."
+        },
+        {
+          "code": "B",
+          "optionId": "information-load:B",
+          "answerText": "Start with a summary, then add the detail I need.",
+          "moduleText": "Start with a short summary, then add only the detail needed to act."
+        },
+        {
+          "code": "C",
+          "optionId": "information-load:C",
+          "answerText": "Give me fuller context in a clear, scannable structure.",
+          "moduleText": "Provide fuller context in a clear, scannable structure."
+        }
+      ]
+    },
+    {
+      "id": "decision-support",
+      "title": "Making decisions",
+      "prompt": "When several reasonable options exist, what should the assistant do?",
+      "options": [
+        {
+          "code": "A",
+          "optionId": "decision-support:A",
+          "answerText": "Recommend one option and explain why.",
+          "moduleText": "Recommend one option and explain why it is the best fit."
+        },
+        {
+          "code": "B",
+          "optionId": "decision-support:B",
+          "answerText": "Compare the main options and tradeoffs.",
+          "moduleText": "Compare the main options and tradeoffs concisely before concluding."
+        },
+        {
+          "code": "C",
+          "optionId": "decision-support:C",
+          "answerText": "Ask one question first when missing information could change the recommendation.",
+          "moduleText": "Ask one question first only when missing information could materially change the recommendation."
+        }
+      ]
+    },
+    {
+      "id": "side-topics",
+      "title": "Handling side topics",
+      "prompt": "When a conversation branches into side topics, what should the assistant do?",
+      "options": [
+        {
+          "code": "A",
+          "optionId": "side-topics:A",
+          "answerText": "Keep me on the current task and flag the drift.",
+          "moduleText": "Keep me on the current task and flag drift clearly."
+        },
+        {
+          "code": "B",
+          "optionId": "side-topics:B",
+          "answerText": "Briefly park useful side topics, then return to the task.",
+          "moduleText": "Briefly park useful side topics, then return to the current task."
+        },
+        {
+          "code": "C",
+          "optionId": "side-topics:C",
+          "answerText": "Follow useful side topics unless I ask to return.",
+          "moduleText": "Follow useful side topics unless I ask to return to the main task."
+        }
+      ]
+    },
+    {
+      "id": "interruption-recovery",
+      "title": "Returning after an interruption",
+      "prompt": "When I return after a break, what should the assistant do?",
+      "options": [
+        {
+          "code": "A",
+          "optionId": "interruption-recovery:A",
+          "answerText": "Continue from the last action with little or no recap.",
+          "moduleText": "Continue from the last action with little or no recap."
+        },
+        {
+          "code": "B",
+          "optionId": "interruption-recovery:B",
+          "answerText": "Give me a brief recap, then the next step.",
+          "moduleText": "Give a brief recap, then provide the next step."
+        },
+        {
+          "code": "C",
+          "optionId": "interruption-recovery:C",
+          "answerText": "Reconstruct the key decisions, open questions, and next step.",
+          "moduleText": "Reconstruct key decisions, open questions, and the next step before continuing."
+        }
+      ]
+    }
+  ],
+  "capacities": [
+    {
+      "id": "usual",
+      "label": "Usual bandwidth",
+      "modifier": null
+    },
+    {
+      "id": "limited",
+      "label": "Limited bandwidth",
+      "modifier": "For this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask."
+    },
+    {
+      "id": "very-limited",
+      "label": "Very limited bandwidth",
+      "modifier": "For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it."
+    }
+  ]
+}
