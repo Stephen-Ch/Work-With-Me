@@ -13,6 +13,9 @@
     "build": "ng build",
     "watch": "ng build --watch --configuration development",
     "test": "ng test --watch=false --browsers=ChromeHeadless",
+    "effectiveness:prepare": "node tools/effectiveness-gate/analyze-results.mjs prepare --seed 20260722 --out tools/effectiveness-gate/review-packet.json",
+    "effectiveness:analyze": "node tools/effectiveness-gate/analyze-results.mjs analyze --input tools/effectiveness-gate/results-template.json --out tools/effectiveness-gate/analysis-output.json",
+    "effectiveness:test": "node --test tools/effectiveness-gate/analyze-results.spec.mjs",
     "e2e": "playwright test"
   },
   "prettier": {

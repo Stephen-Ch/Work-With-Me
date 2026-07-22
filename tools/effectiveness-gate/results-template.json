@@ -1,0 +1,78 @@
+{
+  "version": "mvp-effectiveness-gate-v2",
+  "metadata": {
+    "runId": "replace-with-unique-id",
+    "runDate": "YYYY-MM-DD",
+    "reviewer": "name-or-initials",
+    "assistantPlatform": "ChatGPT or Claude",
+    "modelName": "exact model name",
+    "webEnabled": false,
+    "toolsEnabled": false,
+    "activeSystemOrCustomInstructions": "paste exact active instructions or none"
+  },
+  "cases": [
+    {
+      "caseId": "C01",
+      "profileId": "A",
+      "capacity": "none",
+      "labels": {
+        "A": "WITHOUT",
+        "B": "CURRENT",
+        "C": "CANDIDATE_HARD_CAP"
+      },
+      "responses": [
+        {
+          "label": "A",
+          "rawText": "",
+          "capRule": {
+            "maxWords": null,
+            "maxBullets": null,
+            "disallowNumberedMultiSection": false
+          },
+          "manual": {
+            "easierToActOn": null,
+            "appropriateDetail": null,
+            "followedPreference": null,
+            "unnecessaryInterference": null,
+            "visibleImprovementOverWithout": null,
+            "notes": ""
+          }
+        },
+        {
+          "label": "B",
+          "rawText": "",
+          "capRule": {
+            "maxWords": null,
+            "maxBullets": null,
+            "disallowNumberedMultiSection": false
+          },
+          "manual": {
+            "easierToActOn": null,
+            "appropriateDetail": null,
+            "followedPreference": null,
+            "unnecessaryInterference": null,
+            "visibleImprovementOverWithout": null,
+            "notes": ""
+          }
+        },
+        {
+          "label": "C",
+          "rawText": "",
+          "capRule": {
+            "maxWords": 100,
+            "maxBullets": 5,
+            "disallowNumberedMultiSection": true
+          },
+          "manual": {
+            "easierToActOn": null,
+            "appropriateDetail": null,
+            "followedPreference": null,
+            "unnecessaryInterference": null,
+            "visibleImprovementOverWithout": null,
+            "notes": ""
+          }
+        }
+      ]
+    }
+  ]
+}

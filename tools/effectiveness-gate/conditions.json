@@ -1,0 +1,65 @@
+{
+  "version": "mvp-effectiveness-gate-v2",
+  "conditions": [
+    {
+      "id": "WITHOUT",
+      "label": "Without Work With Me instructions",
+      "instructionMode": "none"
+    },
+    {
+      "id": "CURRENT",
+      "label": "Current production instructions",
+      "instructionMode": "production"
+    },
+    {
+      "id": "CANDIDATE_HARD_CAP",
+      "label": "Experimental hard-cap variant",
+      "instructionMode": "experimental",
+      "experimental": true,
+      "nonproduction": true,
+      "derivedFromPriorReportedFinding": true,
+      "candidateWording": "For broad or open-ended requests that don't ask for full detail, answer in 5 bullet points or fewer, under 100 words total, then stop -- no numbered multi-section framework -- and expand only the part I'm asked about next.",
+      "appliesOnlyWhenProfileUsesQ2A": true
+    }
+  ],
+  "profiles": [
+    {
+      "id": "A",
+      "name": "Directive and brief",
+      "answers": {
+        "Q1": "A",
+        "Q2": "A",
+        "Q3": "A",
+        "Q4": "A",
+        "Q5": "B"
+      }
+    },
+    {
+      "id": "B",
+      "name": "Structured and comparative",
+      "answers": {
+        "Q1": "B",
+        "Q2": "B",
+        "Q3": "B",
+        "Q4": "B",
+        "Q5": "B"
+      }
+    },
+    {
+      "id": "C",
+      "name": "Context and clarification",
+      "answers": {
+        "Q1": "C",
+        "Q2": "C",
+        "Q3": "C",
+        "Q4": "B",
+        "Q5": "C"
+      }
+    }
+  ],
+  "capacityPlan": {
+    "baseline": "none",
+    "limitedMinimumCases": 2,
+    "veryLimitedMinimumCases": 2
+  }
+}
