@@ -1,3 +1,4 @@
+import { Injectable } from '@angular/core';
 import {
   CapacityId,
   MvpCapacityDefinition,
@@ -460,6 +461,9 @@ export function validateMvpContent(raw: unknown): ValidationResult<ValidatedMvpC
   return collector.result(value);
 }
 
+@Injectable({
+  providedIn: 'root',
+})
 export class MvpContentRepository {
   async load(): Promise<ValidatedMvpContent> {
     const response = await fetch(MVP_CONTENT_URL);
