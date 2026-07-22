@@ -204,4 +204,22 @@ describe('mvpResultGuard', () => {
     expect(router.parseUrl).toHaveBeenCalledWith('/setup');
     expect((outcome as unknown as { url: string }).url).toBe('/setup');
   });
+
+  it('rejects incomplete permanent profile when capacity is usual', () => {
+    configureStore({ 'starting-work': 'A' }, 'usual');
+
+    const outcome = runGuard();
+
+    expect(router.parseUrl).toHaveBeenCalledWith('/setup');
+    expect((outcome as unknown as { url: string }).url).toBe('/setup');
+  });
+
+  it('rejects incomplete permanent profile when capacity is very-limited', () => {
+    configureStore({ 'starting-work': 'A' }, 'very-limited');
+
+    const outcome = runGuard();
+
+    expect(router.parseUrl).toHaveBeenCalledWith('/setup');
+    expect((outcome as unknown as { url: string }).url).toBe('/setup');
+  });
 });

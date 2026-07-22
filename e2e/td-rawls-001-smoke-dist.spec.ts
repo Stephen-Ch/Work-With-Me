@@ -9,6 +9,10 @@ const SHARED_OPENING =
   'Use these preferences when they are relevant. Answer normally when my request is already clear and specific.';
 const SHARED_CLOSING =
   'My explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result.';
+const LIMITED_MODIFIER =
+  'For this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask.';
+const VERY_LIMITED_MODIFIER =
+  'For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it.';
 
 const MODULE_SENTENCES = {
   'starting-work': {
@@ -147,7 +151,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     expect(prompt).not.toContain(MODULE_SENTENCES['starting-work'].B);
   });
 
-  test('td-rawls-001 result prompt shape is deterministic and has no capacity selector yet', async ({ page }) => {
+  test('td-rawls-001 result prompt shape is deterministic and capacity starts unselected', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('start-btn').click();
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
@@ -177,11 +181,12 @@ test.describe('Work With Me smoke (dist server)', () => {
     }
 
     expect(lines[2]).toBe(SHARED_CLOSING);
-    await expect(page.getByRole('legend', { name: 'How much bandwidth do you have right now?' })).toHaveCount(0);
+    await expect(page.getByTestId('capacity-fieldset')).toContainText('How much bandwidth do you have right now?');
+    await expect(page.getByTestId('capacity-modifier-preview')).toHaveCount(0);
     await expect(page.getByTestId('capacity-copy-btn')).toHaveCount(0);
   });
 
-  test('td-rawls-001 result reload is stable and start-over re-enables strict guard', async ({ page }) => {
+  test('td-rawls-001 capacity modifier flow is temporary, persistent, and independent', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('start-btn').click();
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
@@ -196,11 +201,40 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
     const promptBefore = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
 
+    await expect(page.getByTestId('capacity-fieldset')).toContainText('How much bandwidth do you have right now?');
+
+    await page.getByTestId('capacity-option-usual').focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByTestId('capacity-option-limited')).toBeChecked();
+
+    const limitedModifier = page.getByTestId('capacity-modifier-preview');
+    await expect(limitedModifier).toBeVisible();
+    await expect(limitedModifier).toContainText(LIMITED_MODIFIER);
+
+    const promptAfterLimited = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
+    expect(promptAfterLimited).toBe(promptBefore);
+
     await page.reload();
     await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
     await expect(page.getByTestId('view-result')).toBeVisible({ timeout: 10_000 });
-    const promptAfter = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
-    expect(promptAfter).toBe(promptBefore);
+
+    await expect(page.getByTestId('capacity-option-limited')).toBeChecked();
+    await expect(page.getByTestId('capacity-modifier-preview')).toContainText(LIMITED_MODIFIER);
+
+    await page.getByTestId('capacity-option-limited').focus();
+    await page.keyboard.press('ArrowDown');
+    await expect(page.getByTestId('capacity-option-very-limited')).toBeChecked();
+    await expect(page.getByTestId('capacity-modifier-preview')).toContainText(VERY_LIMITED_MODIFIER);
+
+    const promptAfterVeryLimited = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
+    expect(promptAfterVeryLimited).toBe(promptBefore);
+
+    await page.getByTestId('capacity-option-very-limited').focus();
+    await page.keyboard.press('ArrowUp');
+    await page.keyboard.press('ArrowUp');
+    await expect(page.getByTestId('capacity-option-usual')).toBeChecked();
+    await expect(page.getByTestId('capacity-modifier-preview')).toHaveCount(0);
+    await expect(page.getByTestId('capacity-copy-btn')).toHaveCount(0);
 
     await page.getByTestId('start-over-btn').click();
     await expect(page).toHaveURL(/\/$/, { timeout: 10_000 });
