@@ -9,16 +9,15 @@ test('Work With Me flow completes and returns home on start over', async ({ page
 
   await page.goto('/');
   await expect(page.getByTestId('view-intro')).toBeVisible();
-  await expect(page.getByTestId('start-btn')).toBeDisabled();
+  await expect(page.getByTestId('start-btn')).toBeEnabled();
 
-  await page.getByTestId('age-gate').check();
   await page.getByTestId('start-btn').click();
   await page.waitForURL(/\/setup$/);
 
-  const answers = ['A', 'B', 'C', 'A', 'B', 'C'] as const;
+  const answers = ['A', 'B', 'C', 'A', 'B'] as const;
 
   for (let index = 0; index < answers.length; index++) {
-    await expect(page.locator('body')).toContainText(`${index + 1} of 6`);
+    await expect(page.locator('body')).toContainText(`Question ${index + 1} of 5`);
     await expect(page.getByTestId('option-A')).toBeVisible();
     await expect(page.getByTestId('option-B')).toBeVisible();
     await expect(page.getByTestId('option-C')).toBeVisible();
@@ -39,5 +38,5 @@ test('Work With Me flow completes and returns home on start over', async ({ page
 
   await page.getByTestId('start-over-btn').click();
   await page.waitForURL(/\/$/);
-  await expect(page.getByTestId('age-gate')).toBeVisible();
+  await expect(page.getByTestId('start-btn')).toBeVisible();
 });

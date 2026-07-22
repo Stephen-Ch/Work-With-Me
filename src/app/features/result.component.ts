@@ -1,16 +1,14 @@
-import { Component, inject, computed, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { ContentService } from '../core/content/content.service';
-import { SessionStore } from '../core/session/session.store';
-import { scoreSetup } from '../core/engine/scoring.engine';
-import { generateDocument } from '../core/engine/document.generator';
+import { generatePermanentPrompt } from '../core/mvp/mvp-generator';
+import { MvpContentService } from '../core/mvp/mvp-content.service';
+import { MvpSessionStore } from '../core/mvp/mvp-session.store';
+import { isMvpResultEligible } from '../core/mvp/mvp-result.guard';
 
-function track(event: string): void {
-  if (typeof window !== 'undefined' && (window as any).plausible) {
-    (window as any).plausible(event);
-  }
-}
+const COPY_IDLE = 'Copy permanent prompt';
+const COPY_SUCCESS = 'Copied';
+const COPY_FAILURE = 'Copy failed';
 
 @Component({
   selector: 'app-result',
@@ -19,106 +17,120 @@ function track(event: string): void {
   template: `
     <div class="max-w-2xl mx-auto p-6 space-y-6" data-testid="view-result">
 
-      <header class="text-center space-y-2">
-          <h2 class="text-2xl font-bold text-gray-900">Your instruction block is ready</h2>
-        <p class="text-gray-600 text-sm">
-          Copy this short block, start a new AI conversation, paste it first, and put your real request underneath it.
-        </p>
-      </header>
-
-      <!-- Primary actions -->
-      <div class="flex flex-col sm:flex-row gap-3">
-        <button
-          data-testid="copy-btn"
-          (click)="copyToClipboard()"
-          class="flex-1 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-          {{ copyLabel() }}
-        </button>
-        <button
-          data-testid="start-over-btn"
-          (click)="startOver()"
-          class="flex-1 py-3 px-5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-          Start Over
-        </button>
-      </div>
-
-      <ol
-        data-testid="usage-instructions"
-        class="bg-blue-50 border border-blue-100 rounded-lg px-5 py-4 text-sm text-blue-950 space-y-2 list-decimal list-inside">
-        <li>Copy the instruction block.</li>
-        <li>Open a new AI conversation.</li>
-        <li>Paste the block first.</li>
-        <li>Write your actual request below it and continue normally.</li>
-      </ol>
-
-      <!-- Instruction block preview -->
-      <div class="border border-gray-200 rounded-lg overflow-hidden">
-        <div class="bg-gray-100 px-4 py-2 text-xs text-gray-500 font-semibold border-b border-gray-200">
-          Instruction block
+      @if (loading()) {
+        <p class="text-gray-500 text-center py-12" data-testid="loading-state">Loading your prompt…</p>
+      } @else if (error()) {
+        <div class="text-center py-12 space-y-3" data-testid="error-state" role="alert">
+          <p class="text-red-600">{{ error() }}</p>
+          <button
+            data-testid="retry-btn"
+            (click)="retry()"
+            class="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Retry
+          </button>
         </div>
-        <pre
-          data-testid="document-preview"
-          class="p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed">{{ document() }}</pre>
-      </div>
+      } @else if (promptText(); as prompt) {
+        <header class="text-center space-y-2">
+          <h2 class="text-2xl font-bold text-gray-900">Your permanent instructions are ready</h2>
+          <p class="text-gray-600 text-sm">Copy this exactly, then paste it at the top of a new AI conversation.</p>
+        </header>
 
-      <!-- Feedback link -->
-      <div class="bg-blue-50 border border-blue-100 rounded-lg px-4 py-4 text-sm text-center space-y-1">
-        <p class="font-semibold text-blue-900">Used your instructions? Tell us what happened.</p>
-        <p class="text-blue-700 text-xs">Anonymous · Takes 3 minutes · Helps us improve</p>
-        <a
-          href="https://forms.gle/LEPLwyKgqQpZ6ga17"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="inline-block mt-2 px-5 py-2 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors text-sm">
-          Share feedback
-        </a>
-      </div>
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            data-testid="copy-btn"
+            (click)="copyPermanentPrompt()"
+            class="flex-1 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+            {{ copyLabel() }}
+          </button>
+          <button
+            data-testid="start-over-btn"
+            (click)="startOver()"
+            class="flex-1 py-3 px-5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            Start Over
+          </button>
+        </div>
 
+        <p class="text-sm text-gray-700" data-testid="copy-status" aria-live="polite">{{ copyStatus() }}</p>
+
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 px-4 py-2 text-xs text-gray-500 font-semibold border-b border-gray-200">
+            Permanent prompt
+          </div>
+          <pre
+            data-testid="document-preview"
+            class="p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed">{{ prompt }}</pre>
+        </div>
+
+        @if (copyStatus() === copyFailureText) {
+          <p class="text-sm text-amber-700" data-testid="copy-fallback">
+            Copy failed. Select the prompt text manually and copy with your keyboard.
+          </p>
+        }
+      }
     </div>
   `
 })
 export class ResultComponent implements OnInit {
-  private sessionStore = inject(SessionStore);
-  private contentService = inject(ContentService);
-  private router = inject(Router);
+  private readonly sessionStore = inject(MvpSessionStore);
+  private readonly contentService = inject(MvpContentService);
+  private readonly router = inject(Router);
 
-  copyLabel = signal('Copy instructions');
+  readonly loading = this.contentService.loading;
+  readonly error = this.contentService.error;
+  readonly content = this.contentService.content;
+  readonly selections = this.sessionStore.permanentSelections;
 
-  document = computed(() => {
-    const content = this.contentService.state().content;
-    const answers = this.sessionStore.answers();
+  readonly copyFailureText = COPY_FAILURE;
+  readonly copyLabel = signal(COPY_IDLE);
+  readonly copyStatus = signal('');
 
-    if (!content) return 'Loading…';
+  readonly promptText = computed(() => {
+    const content = this.content();
+    if (!content || !isMvpResultEligible(this.selections())) {
+      return null;
+    }
 
-    const result = scoreSetup(answers, content.controls);
-    return generateDocument(result, content);
+    try {
+      return generatePermanentPrompt(this.selections(), content).prompt;
+    } catch {
+      return null;
+    }
   });
 
-  constructor() {
-    // Fire once when the result screen loads with a valid document
-    track('assessment_completed');
-  }
-
   ngOnInit(): void {
-    if (!this.contentService.state().content) {
-      void this.contentService.loadContent();
-    }
+    void this.initialize();
   }
 
-  async copyToClipboard(): Promise<void> {
-    const text = this.document();
+  async copyPermanentPrompt(): Promise<void> {
+    const text = this.promptText();
+    if (!text) {
+      return;
+    }
+
     try {
       await navigator.clipboard.writeText(text);
-      track('document_copied');
-      this.copyLabel.set('Copied!');
-      setTimeout(() => this.copyLabel.set('Copy instructions'), 2500);
+      this.copyLabel.set(COPY_SUCCESS);
+      this.copyStatus.set('Permanent prompt copied to clipboard.');
     } catch {
-      this.copyLabel.set('Copy failed — select text manually');
+      this.copyLabel.set(COPY_FAILURE);
+      this.copyStatus.set(COPY_FAILURE);
     }
   }
 
   startOver(): void {
-    this.sessionStore.startFresh();
-    this.router.navigate(['/']);
+    this.sessionStore.clear();
+    void this.router.navigate(['/']);
+  }
+
+  retry(): void {
+    void this.initialize();
+  }
+
+  private async initialize(): Promise<void> {
+    await this.contentService.loadContent();
+
+    if (!isMvpResultEligible(this.selections())) {
+      void this.router.navigate(['/setup']);
+    }
   }
 }

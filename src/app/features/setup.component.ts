@@ -1,24 +1,19 @@
-import { Component, inject, computed, signal, ChangeDetectionStrategy, OnInit } from '@angular/core';
+import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { ContentService } from '../core/content/content.service';
-import { SessionStore } from '../core/session/session.store';
-import { Setting } from '../core/content/types';
+import { MvpContentService } from '../core/mvp/mvp-content.service';
+import { MvpSessionStore } from '../core/mvp/mvp-session.store';
+import { isMvpResultEligible } from '../core/mvp/mvp-result.guard';
+import { OptionCode, PermanentQuestionId, ValidatedMvpContent } from '../core/mvp/mvp.types';
 
-function track(event: string): void {
-  if (typeof window !== 'undefined' && (window as any).plausible) {
-    (window as any).plausible(event);
-  }
-}
-
-interface FlatQuestion {
-  questionId: string;
-  questionText: string;
-  options: Record<Setting, string>;
-  controlName: string;
-  controlIndex: number;
-  questionIndex: number;
-  totalQuestions: number;
+interface MvpQuestionView {
+  readonly id: PermanentQuestionId;
+  readonly title: string;
+  readonly prompt: string;
+  readonly options: ReadonlyArray<{
+    readonly code: OptionCode;
+    readonly answerText: string;
+  }>;
 }
 
 @Component({
@@ -29,48 +24,57 @@ interface FlatQuestion {
     <div class="max-w-2xl mx-auto p-6 flex flex-col gap-6" data-testid="view-setup">
 
       @if (loading()) {
-        <p class="text-gray-500 text-center py-12">Loading…</p>
+        <p class="text-gray-500 text-center py-12" data-testid="loading-state">Loading questions…</p>
       } @else if (error()) {
-        <p class="text-red-500 text-center py-12">{{ error() }}</p>
+        <div class="text-center py-12 space-y-3" data-testid="error-state" role="alert">
+          <p class="text-red-600">{{ error() }}</p>
+          <button
+            data-testid="retry-btn"
+            (click)="retry()"
+            class="px-4 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
+            Retry
+          </button>
+        </div>
       } @else if (currentQuestion(); as q) {
 
-        <!-- Progress -->
         <div class="space-y-1">
-          <div class="flex justify-between text-xs text-gray-500">
-            <span class="font-medium text-gray-700">{{ q.controlName }}</span>
-            <span>{{ currentIndex() + 1 }} of {{ q.totalQuestions }}</span>
+          <div class="flex justify-between text-xs text-gray-500" data-testid="progress-counter">
+            <span class="font-medium text-gray-700">Question {{ currentIndex() + 1 }} of {{ totalQuestions() }}</span>
+            <span>{{ progressPercent() }}%</span>
           </div>
           <div class="w-full bg-gray-200 rounded-full h-1.5">
             <div
               class="bg-blue-500 h-1.5 rounded-full transition-all duration-300"
-              [style.width.%]="progressPercent(q)">
+              [style.width.%]="progressPercent()">
             </div>
           </div>
         </div>
 
-        <!-- Question card -->
         <div class="bg-white border border-gray-200 rounded-xl p-6 shadow-sm space-y-6">
-          <p
-            class="text-lg text-gray-900 leading-relaxed"
-            data-testid="question-statement">
-            {{ q.questionText }}
-          </p>
+          <fieldset class="space-y-3" data-testid="question-fieldset">
+            <legend class="text-lg text-gray-900 leading-relaxed font-semibold" data-testid="question-statement">
+              {{ q.prompt }}
+            </legend>
 
-          <!-- A / B / C options -->
-          <div class="flex flex-col gap-3">
-            @for (opt of optionKeys; track opt) {
-              <button
-                [attr.data-testid]="'option-' + opt"
-                [class]="optionClass(opt, q.questionId)"
-                (click)="selectAnswer(q.questionId, opt)">
-                <span class="font-bold text-sm mr-2">{{ opt }}</span>
-                <span class="text-sm leading-snug text-left">{{ q.options[opt] }}</span>
-              </button>
+            @for (option of q.options; track option.code) {
+              <label class="flex items-start gap-3 rounded-lg border border-gray-200 px-3 py-3 hover:border-blue-400 cursor-pointer">
+                <input
+                  type="radio"
+                  [name]="q.id"
+                  [value]="option.code"
+                  [checked]="selectedOptionCode(q.id) === option.code"
+                  (change)="recordSelection(q.id, option.code)"
+                  [attr.data-testid]="'option-' + option.code"
+                  class="mt-0.5 h-4 w-4 border-gray-300 text-blue-600 focus:ring-blue-500" />
+                <span class="text-sm text-gray-800 leading-snug">
+                  <strong>{{ option.code }}</strong>
+                  <span class="ml-2">{{ option.answerText }}</span>
+                </span>
+              </label>
             }
-          </div>
+          </fieldset>
         </div>
 
-        <!-- Navigation -->
         <div class="flex justify-between items-center">
           <button
             data-testid="back-btn"
@@ -80,14 +84,13 @@ interface FlatQuestion {
             ← Back
           </button>
 
-          @if (isAnswered(q.questionId)) {
-            <button
-              data-testid="next-btn"
-              (click)="goForward()"
-              class="px-6 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors">
-              {{ isLast() ? 'See My Document' : 'Next' }} →
-            </button>
-          }
+          <button
+            data-testid="next-btn"
+            [disabled]="!canAdvance()"
+            (click)="goForward()"
+            class="px-6 py-2 text-sm font-semibold bg-blue-600 text-white rounded-lg hover:bg-blue-700 disabled:opacity-40 disabled:cursor-not-allowed transition-colors">
+            {{ isLastQuestion() ? 'See My Prompt' : 'Next' }} →
+          </button>
         </div>
 
       }
@@ -95,97 +98,120 @@ interface FlatQuestion {
   `
 })
 export class SetupComponent implements OnInit {
-  private contentService = inject(ContentService);
-  private sessionStore = inject(SessionStore);
-  private router = inject(Router);
+  private readonly contentService = inject(MvpContentService);
+  private readonly sessionStore = inject(MvpSessionStore);
+  private readonly router = inject(Router);
 
-  readonly optionKeys: Setting[] = ['A', 'B', 'C'];
+  readonly currentIndex = signal(0);
 
-  currentIndex = signal(0);
+  readonly loading = this.contentService.loading;
+  readonly error = this.contentService.error;
+  readonly content = this.contentService.content;
+  readonly selections = this.sessionStore.permanentSelections;
 
-  loading = computed(() => this.contentService.state().loading);
-  error = computed(() => this.contentService.state().error);
-  answers = computed(() => this.sessionStore.answers());
-
-  flatQuestions = computed((): FlatQuestion[] => {
-    const content = this.contentService.state().content;
-    if (!content) return [];
-
-    const flat: FlatQuestion[] = [];
-    const totalQuestions = content.controls.reduce((sum, c) => sum + c.questions.length, 0);
-
-    content.controls.forEach((control, controlIndex) => {
-      control.questions.forEach((q, questionIndex) => {
-        flat.push({
-          questionId: q.id,
-          questionText: q.text,
-          options: q.options,
-          controlName: control.name,
-          controlIndex,
-          questionIndex,
-          totalQuestions
-        });
-      });
-    });
-
-    return flat;
+  readonly questions = computed(() => {
+    const content = this.content();
+    if (!content) {
+      return [];
+    }
+    return content.questionOrder.map((questionId) => toQuestionView(content, questionId));
   });
 
-  currentQuestion = computed((): FlatQuestion | null => {
-    const questions = this.flatQuestions();
-    const idx = this.currentIndex();
-    return questions[idx] ?? null;
+  readonly totalQuestions = computed(() => this.questions().length);
+
+  readonly currentQuestion = computed((): MvpQuestionView | null => {
+    const questions = this.questions();
+    const index = this.currentIndex();
+    return questions[index] ?? null;
   });
 
   ngOnInit(): void {
     void this.initialize();
   }
 
-  progressPercent(q: FlatQuestion): number {
-    return Math.round(((this.currentIndex() + 1) / q.totalQuestions) * 100);
+  progressPercent(): number {
+    const total = this.totalQuestions();
+    if (total === 0) {
+      return 0;
+    }
+    return Math.round(((this.currentIndex() + 1) / total) * 100);
   }
 
-  isAnswered(questionId: string): boolean {
-    return questionId in this.answers();
+  selectedOptionCode(questionId: PermanentQuestionId): OptionCode | undefined {
+    return this.selections()[questionId];
   }
 
-  isLast(): boolean {
-    return this.currentIndex() === this.flatQuestions().length - 1;
+  canAdvance(): boolean {
+    const question = this.currentQuestion();
+    if (!question) {
+      return false;
+    }
+    return Boolean(this.selectedOptionCode(question.id));
   }
 
-  optionClass(opt: Setting, questionId: string): string {
-    const selected = this.answers()[questionId] === opt;
-    const base = 'flex items-start w-full px-4 py-3 rounded-lg border-2 text-left transition-colors';
-    return selected
-      ? `${base} bg-blue-600 text-white border-blue-600`
-      : `${base} bg-white text-gray-700 border-gray-200 hover:border-blue-400 hover:bg-blue-50`;
+  isLastQuestion(): boolean {
+    return this.currentIndex() === this.totalQuestions() - 1;
   }
 
-  selectAnswer(questionId: string, value: Setting): void {
-    this.sessionStore.recordAnswer(questionId, value);
+  recordSelection(questionId: PermanentQuestionId, optionCode: OptionCode): void {
+    this.sessionStore.recordPermanentAnswer(questionId, optionCode);
   }
 
   goForward(): void {
-    if (this.isLast()) {
-      track('setup_completed');
-      this.router.navigate(['/result']);
+    if (!this.canAdvance()) {
       return;
     }
-    this.currentIndex.update(i => i + 1);
+
+    if (this.isLastQuestion()) {
+      if (isMvpResultEligible(this.selections())) {
+        void this.router.navigate(['/result']);
+      }
+      return;
+    }
+
+    this.currentIndex.update((index) => index + 1);
   }
 
   goBack(): void {
-    if (this.currentIndex() === 0) return;
-    this.currentIndex.update(i => i - 1);
+    if (this.currentIndex() === 0) {
+      return;
+    }
+    this.currentIndex.update((index) => index - 1);
+  }
+
+  retry(): void {
+    void this.initialize();
   }
 
   private async initialize(): Promise<void> {
     await this.contentService.loadContent();
 
-    const questions = this.flatQuestions();
-    if (questions.length === 0) return;
+    const questions = this.questions();
+    if (questions.length === 0) {
+      return;
+    }
 
-    const firstUnansweredIndex = questions.findIndex(question => !(question.questionId in this.answers()));
-    this.currentIndex.set(firstUnansweredIndex === -1 ? questions.length - 1 : firstUnansweredIndex);
+    if (isMvpResultEligible(this.selections())) {
+      void this.router.navigate(['/result']);
+      return;
+    }
+
+    const firstUnanswered = questions.findIndex((question) => !this.selectedOptionCode(question.id));
+    this.currentIndex.set(firstUnanswered === -1 ? questions.length - 1 : firstUnanswered);
+  }
+}
+
+function toQuestionView(content: ValidatedMvpContent, questionId: PermanentQuestionId): MvpQuestionView {
+  const question = content.questions[questionId];
+  const optionCodes: readonly OptionCode[] = ['A', 'B', 'C'];
+
+  return {
+    id: question.id,
+    title: question.title,
+    prompt: question.prompt,
+    options: optionCodes.map((code) => ({
+      code,
+      answerText: question.options[code].answerText,
+    })),
   }
 }
