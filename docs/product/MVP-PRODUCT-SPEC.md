@@ -1,126 +1,148 @@
 # Work With Me MVP Product Specification
 
+## Product Identity
+- Working product name: Work With Me.
+- Name status: provisional for internal use.
+
 ## Problem Statement
-Work With Me helps people turn common work barriers into practical instructions for an AI assistant. Many professionals can use AI more effectively when the assistant responds in a way that is easier to understand, act on, and apply. The product gives users a short, nonclinical questionnaire that translates their working preferences into copy-ready instructions.
+AI can improve productivity only when responses are easy to understand, act on, and apply. Work With Me turns a short set of practical preferences into copy-ready assistant instructions so people spend less time rewriting prompts.
 
 ## Target Users
-- Employees who use AI to draft, plan, summarize, compare options, or restart interrupted work.
-- Individual contributors who want clearer, more useful AI responses without building custom prompts from scratch.
-- Teams that want a lightweight, privacy-preserving productivity tool.
+- Employees using AI for writing, planning, coding support, decision support, and interrupted-work recovery.
+- Individual contributors who want predictable AI response style without setup overhead.
+- Teams exploring AI-enabled productivity with a lightweight, privacy-first workflow.
 
 ## Business Value
-- Helps employees get more usable output from AI with less setup friction.
-- Reduces repeated prompt rewriting by giving users a reusable instruction block.
-- Supports broader AI adoption by making responses more practical and easier to apply.
-- Keeps the product simple enough for fast internal experimentation.
+Helps people get AI responses that are easier to understand, act on, and apply.
 
-## Nonclinical Boundaries
-- The product does not diagnose, label, score, or judge users.
-- The product does not mention or target any health condition in the questionnaire or generated output.
-- The product does not claim to treat or improve any condition.
-- The product does not infer personal traits from the answers.
-- The product uses neutral language about work preferences and current capacity only.
+## Product Boundaries
+- Exactly five required permanent questions.
+- Exactly three answers per required question.
+- No scores.
+- No named profiles.
+- No optional free-text input in the first MVP.
+- Platform-neutral generated output.
+- Users can preview and copy generated output.
+- Users cannot edit generated output inside the first MVP.
+- No backend.
+- No accounts.
+- No analytics.
+- No persistent storage of completed answers.
+- Temporary in-session state is allowed during an active questionnaire.
+
+## Public Framing
+- Primary framing: AI-enabled productivity.
+- Cognitive accessibility may be described in supporting material.
+- No claims of measured productivity improvement.
 
 ## Complete User Flow
-1. User opens Work With Me and sees a short explanation of what the tool does.
-2. User answers five required questions about how they want AI to help.
-3. User optionally selects a current capacity level.
-4. User optionally adds one short recurring-frustration note in free text.
-5. The product generates a permanent Work With Me prompt.
-6. If a current capacity level was selected, the product also generates a temporary session modifier.
-7. If free text was provided, the product adds one short custom instruction that reflects that recurring frustration.
-8. User copies the generated text into an AI assistant.
+1. User opens Work With Me and sees a brief productivity-focused explanation.
+2. User answers five required permanent questions.
+3. User sees a generated permanent Work With Me prompt.
+4. User previews and copies the permanent prompt.
+5. User optionally selects current capacity on the results screen.
+6. If capacity is selected, user sees a temporary session modifier.
+7. User copies the capacity modifier if needed for the current chat.
 
-The exact placement of the current-capacity selector and the edit/preview experience are still open decisions and are tracked in [OPEN-DECISIONS.md](OPEN-DECISIONS.md).
-
-## Finalized Questions
+## Finalized Permanent Questions
 ### 1. Starting unclear or complex work
-Question: When you start a task that feels unclear or complex, what helps most?
+When a task feels unclear or complex, what helps most?
 - Give me one clear first step.
-- Break it into a few concrete steps and show the order.
-- Give me the full picture, then recommend a starting point.
+- Break it into a short ordered plan.
+- Give me the broader picture, then recommend where to start.
 
 ### 2. Managing information load
-Question: When information is piling up, what should the assistant do?
-- Keep it short and focus on the essentials.
-- Give a short summary first, then add supporting detail.
-- Include fuller context, but keep the structure easy to scan.
+When information is piling up, what should the assistant do?
+- Keep it brief and focus on the essentials.
+- Start with a summary, then add the detail I need.
+- Give me fuller context in a clear, scannable structure.
 
-### 3. Making decisions among reasonable options
-Question: When several reasonable options exist, what should the assistant do?
-- Recommend one option clearly.
-- Compare the main options and note the tradeoffs.
-- Ask me one clarifying question before recommending.
+### 3. Making decisions
+When several reasonable options exist, what should the assistant do?
+- Recommend one option and explain why.
+- Compare the main options and tradeoffs.
+- Ask one question first when missing information could change the recommendation.
 
-### 4. Maintaining focus and handling tangents
-Question: When the conversation starts drifting, what should the assistant do?
-- Keep me on the original task and point out the drift.
-- Mention the tangent briefly, then return to the main task.
-- Follow the tangent if I ask to explore it.
+### 4. Handling side topics
+When a conversation branches into side topics, what should the assistant do?
+- Keep me on the current task and flag the drift.
+- Briefly park useful side topics, then return to the task.
+- Follow useful side topics unless I ask to return.
 
-### 5. Resuming after interruption
-Question: When I return after a break, what should the assistant do?
-- Resume from the last concrete step without repeating everything.
-- Summarize where we left off, then continue.
-- Rebuild the context quickly if needed, then continue.
+### 5. Returning after an interruption
+When I return after a break, what should the assistant do?
+- Continue from the last action with little or no recap.
+- Give me a brief recap, then the next step.
+- Reconstruct the key decisions, open questions, and next step.
 
-## Current-Capacity Selector
-The MVP includes one optional current-capacity selector with these working labels:
-- regular capacity
-- strained capacity
-- depleted capacity
+## Capacity Selector (Optional, Temporary)
+Location: results screen, separate from permanent preferences.
 
-The selector is not a diagnostic tool. It only changes the temporary session modifier so the assistant can adjust response length and pacing for the current session.
+Question: How much bandwidth do you have right now?
+- Usual bandwidth
+- Limited bandwidth
+- Very limited bandwidth
 
-## Optional Free-Text Question
-Prompt: Is there one recurring work frustration you want the assistant to remember?
+Behavior:
+- Usual bandwidth: no additional session modifier.
+- Limited bandwidth: compact session modifier.
+- Very limited bandwidth: essentials-only session modifier.
+- Capacity instructions are temporary defaults for the current session.
+- Explicit user requests always override capacity defaults.
 
-Guidance:
-- Keep it to one short sentence.
-- Treat it as a recurring instruction, not as a label.
-- Use it only if the user enters text.
+## Generated Prompt Rules
+### Shared opening
+Use these preferences when they are relevant. Answer normally when my request is already clear and specific.
 
-## Expected Completion Time
-- 2 to 4 minutes for most users.
-- Slightly longer if the user adds a free-text instruction.
+### Shared closing
+My explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result.
 
-## Output Formats
-### Permanent output
-A copy-ready plain-text Work With Me prompt that combines the five permanent answers into one reusable instruction block.
+### Length targets
+- Permanent prompt: normally 90 to 140 words.
+- Permanent prompt hard maximum: 180 words.
+- Limited-bandwidth modifier: 20 to 40 words.
+- Very-limited-bandwidth modifier: 20 to 40 words.
+- Usual bandwidth: no modifier.
 
-### Temporary output
-A short session modifier that reflects the selected current capacity and is intended for the current chat only.
+### Precedence order
+1. User's explicit current request.
+2. Temporary capacity modifier.
+3. Permanent Work With Me preferences.
+4. General assistant defaults.
 
-### Optional output
-A single custom instruction sentence generated from the user’s recurring frustration note when present.
+The capacity modifier must not suppress explicitly requested depth, options, formatting, or completeness.
+
+## Deterministic Generation Requirements
+- Prompt generation must use fixed authored modules.
+- Assembly rules must be deterministic.
+- The generator must not call an AI model.
+- The generator must not paraphrase modules dynamically.
+- The generator must not infer user traits.
+- The generator must not invent extra instructions.
 
 ## Accessibility and Privacy Principles
-- Use short, plain language.
-- Keep choices concrete and easy to scan.
-- Avoid jargon and avoid requiring users to self-label.
-- Make the questionnaire usable with keyboard and screen reader support.
-- Do not store responses on a backend in the MVP.
-- Minimize data collection to only what is needed for generation.
-- Avoid asking for personally sensitive details.
+- Keep language plain and actionable.
+- Keep choices concrete and scannable.
+- Preserve keyboard and screen-reader usability.
+- Keep processing local in the first MVP.
+- Avoid collecting unnecessary user data.
 
 ## Out of Scope
-- Diagnostic language or condition-based personalization.
-- Scoring, ranking, or profile assignment.
-- Personality assessment.
-- Accounts, analytics, enterprise integrations, or server-side storage.
-- Product redesign of the current screens.
-- Platform-specific AI integrations in the MVP.
-- Claims of measured productivity improvement before evidence exists.
+- Condition-related personalization.
+- Scoring systems and profile labels.
+- User-editable prompt authoring inside the MVP UI.
+- Platform-specific integrations.
+- Accounts, backend services, analytics, and persistence.
 
 ## MVP Acceptance Criteria
-- The product asks exactly five required questions.
-- Every required question offers exactly three answer choices.
-- The product offers one optional current-capacity selector with exactly three choices.
-- The product accepts one optional recurring-frustration free-text instruction.
-- The product generates one permanent Work With Me prompt.
-- The product generates one temporary session modifier when capacity is selected.
-- The permanent prompt uses neutral, nonclinical language.
-- The generated text is copy-ready and understandable without extra editing.
-- The MVP does not diagnose, label, score, or judge the user.
-- The MVP does not require a backend.
-- The MVP does not claim proven productivity gains.
+- Exactly five required permanent questions.
+- Exactly three answer choices for each required question.
+- Exactly 15 permanent modules (one per answer choice).
+- Exactly three capacity-state definitions.
+- No free-text feature in first MVP.
+- Platform-neutral output only.
+- Preview and copy enabled; in-product edit disabled.
+- Deterministic, module-based generator only.
+
+## Decision Lock Reference
+All MVP decisions in this spec are locked for implementation planning and are mirrored in [MVP-DECISIONS.md](MVP-DECISIONS.md).
