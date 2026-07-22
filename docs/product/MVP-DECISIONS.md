@@ -23,6 +23,10 @@ All decisions in this file are locked for first MVP implementation planning.
 | Capacity choices | Usual bandwidth, Limited bandwidth, Very limited bandwidth. |
 | Capacity behavior | Usual bandwidth gives no modifier. Limited bandwidth gives compact modifier. Very limited bandwidth gives essentials-only modifier. |
 | Capacity precedence | Capacity instructions are temporary defaults. Explicit user requests always override them. |
+| One-copy composition model | Permanent profile content and capacity content remain separate internally; result UI composes one copy block for user output. |
+| Copy interaction | Result screen exposes one Copy instructions action for the composed preview. |
+| Composition rules | No-selection and Usual append nothing. Limited and Very limited append after exactly one blank line. |
+| Identity boundary | Capacity modifier is temporary and never changes permanent-profile identity or selections. |
 | Public framing | Lead with AI-enabled productivity. Cognitive accessibility may be explained in supporting material. |
 | Business value wording | Helps people get AI responses that are easier to understand, act on, and apply. |
 | Claims policy | Do not claim measured productivity improvement. |

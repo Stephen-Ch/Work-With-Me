@@ -15,6 +15,7 @@ The app is nonclinical. It does not diagnose, label, or profile medical or menta
 - Changing bandwidth never changes the saved permanent preferences.
 - The permanent generator remains deterministic across all 243 permanent profiles.
 - The combined preview/copy behavior is validated across all 729 profile-capacity combinations.
+- These deterministic checks verify generation correctness, not behavioral effectiveness in real assistant outcomes.
 
 ## Privacy and data
 
@@ -22,6 +23,7 @@ The app is nonclinical. It does not diagnose, label, or profile medical or menta
 - No analytics or third-party telemetry is sent by the app runtime.
 - No backend, account, or cloud sync is required.
 - Start Over clears MVP session state.
+
 
 ## Running locally
 
@@ -40,6 +42,9 @@ Run dist browser acceptance: `npm run e2e:dist`
 - Karma/Jasmine unit tests
 - Playwright end-to-end tests (dist smoke acceptance)
 
+
 ## License
 
 MIT. See [LICENSE](LICENSE).
+
+Deterministic generation is exhaustively tested. Behavioral effectiveness remains a product-validation question.

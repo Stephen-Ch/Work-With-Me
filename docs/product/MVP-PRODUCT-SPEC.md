@@ -38,11 +38,13 @@ Helps people get AI responses that are easier to understand, act on, and apply.
 ## Complete User Flow
 1. User opens Work With Me and sees a brief productivity-focused explanation.
 2. User answers five required permanent questions.
-3. User sees a generated permanent Work With Me prompt.
-4. User previews and copies the permanent prompt.
-5. User optionally selects current capacity on the results screen.
-6. If capacity is selected, user sees a temporary session modifier.
-7. User copies the capacity modifier if needed for the current chat.
+3. User reaches the results screen and sees one combined instructions preview.
+4. User may optionally select current bandwidth.
+5. No selection and Usual bandwidth produce permanent-only instructions.
+6. Limited and Very limited append one temporary final paragraph after exactly one blank line.
+7. Changing bandwidth updates only the temporary paragraph and never alters permanent selections.
+8. User copies instructions with one Copy instructions action.
+9. Copied text exactly matches the visible combined preview.
 
 ## Finalized Permanent Questions
 ### 1. Starting unclear or complex work
@@ -89,6 +91,7 @@ Behavior:
 - Very limited bandwidth: essentials-only session modifier.
 - Capacity instructions are temporary defaults for the current session.
 - Explicit user requests always override capacity defaults.
+- Capacity paragraph is separate from permanent-profile identity and is composed only in the result copy block.
 
 ## Generated Prompt Rules
 ### Shared opening

@@ -1,7 +1,7 @@
 # MVP Release Candidate Status
 
 Date: 2026-07-22
-Branch: feature/mvp-release-cleanup
+Branch: main
 
 ## Product behavior locked for release
 
@@ -37,6 +37,15 @@ Verified:
 - Exactly one copy action is present.
 - No-selection and Usual both produce permanent-only output.
 - Capacity is not part of permanent-profile identity.
+
+## Post-release hostile review findings
+
+- Behavioral effectiveness of the current content remains unproven.
+- Prior project lineage included a WITH/WITHOUT effectiveness gate pattern.
+- Current 243/729 combinatorial tests establish deterministic correctness, not behavioral value.
+- A new reproducible effectiveness gate is being prepared for manual assistant-session runs.
+- Overlooked inherited tooling was found and audited for required vs dead status.
+- Production prompt content has not been changed based on hostile-review conclusions in this phase.
 
 Search audit for obsolete concepts:
 
