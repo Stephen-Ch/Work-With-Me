@@ -7,10 +7,26 @@ import {
 } from './mvp.types';
 
 const MAX_PERMANENT_WORDS = 180;
+const TARGET_MIN_WORDS = 90;
+const TARGET_MAX_WORDS = 140;
+
+const VALID_OPTION_CODES: readonly OptionCode[] = ['A', 'B', 'C'];
 
 export interface ProfileValidationResult {
   readonly valid: boolean;
-  readonly errors: readonly string[];
+  readonly missingQuestionIds: readonly PermanentQuestionId[];
+  readonly unknownQuestionIds: readonly string[];
+  readonly unknownOptionCodes: readonly string[];
+}
+
+export interface PermanentPromptResult {
+  readonly prompt: string;
+  readonly segments: readonly string[];
+  readonly wordCount: number;
+  readonly targetRangeStatus:
+    | 'below-target'
+    | 'within-target'
+    | 'above-target';
 }
 
 export class MvpGenerationError extends Error {}
@@ -19,53 +35,121 @@ function normalizeForExactDuplicateCheck(text: string): string {
   return text.trim().replace(/\s+/g, ' ');
 }
 
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function toOptionCodeString(value: unknown): string {
+  if (typeof value === 'string') {
+    return value;
+  }
+  if (value === null) {
+    return '<null>';
+  }
+  if (Array.isArray(value)) {
+    return '<array>';
+  }
+  return `<${typeof value}>`;
+}
+
+function isOptionCode(value: unknown): value is OptionCode {
+  return typeof value === 'string' && VALID_OPTION_CODES.includes(value as OptionCode);
+}
+
 export function countWords(text: string): number {
-  const matches = text.match(/\b\S+\b/g);
-  return matches ? matches.length : 0;
+  const trimmed = text.trim();
+  if (trimmed.length === 0) {
+    return 0;
+  }
+
+  return trimmed.split(/\s+/).length;
 }
 
 export function validateProfile(
-  selections: Partial<Record<PermanentQuestionId, OptionCode>>,
+  selections: unknown,
   content: ValidatedMvpContent
 ): ProfileValidationResult {
-  const errors: string[] = [];
+  const missing = new Set<PermanentQuestionId>(content.questionOrder);
+  const unknownQuestionIds: string[] = [];
+  const unknownOptionCodes: string[] = [];
 
-  for (const questionId of content.questionOrder) {
-    const selection = selections[questionId];
-    if (!selection) {
-      errors.push(`Missing selection for ${questionId}.`);
+  if (!isRecord(selections)) {
+    return {
+      valid: false,
+      missingQuestionIds: [...missing],
+      unknownQuestionIds,
+      unknownOptionCodes,
+    };
+  }
+
+  for (const [questionId, optionCode] of Object.entries(selections)) {
+    if (!content.questionOrder.includes(questionId as PermanentQuestionId)) {
+      unknownQuestionIds.push(questionId);
       continue;
     }
 
-    if (!['A', 'B', 'C'].includes(selection)) {
-      errors.push(`Invalid option code ${selection} for ${questionId}.`);
+    missing.delete(questionId as PermanentQuestionId);
+
+    if (!isOptionCode(optionCode)) {
+      unknownOptionCodes.push(`${questionId}:${toOptionCodeString(optionCode)}`);
       continue;
     }
 
-    const option = content.questions[questionId].options[selection as OptionCode];
+    const option = content.questions[questionId as PermanentQuestionId].options[optionCode];
     if (!option) {
-      errors.push(`Unknown option ${questionId}:${selection}.`);
+      unknownOptionCodes.push(`${questionId}:${optionCode}`);
     }
   }
 
+  const missingQuestionIds = [...missing];
+
   return {
-    valid: errors.length === 0,
-    errors,
+    valid:
+      missingQuestionIds.length === 0 &&
+      unknownQuestionIds.length === 0 &&
+      unknownOptionCodes.length === 0,
+    missingQuestionIds,
+    unknownQuestionIds,
+    unknownOptionCodes,
   };
 }
 
+function toRangeStatus(wordCount: number): PermanentPromptResult['targetRangeStatus'] {
+  if (wordCount < TARGET_MIN_WORDS) {
+    return 'below-target';
+  }
+  if (wordCount > TARGET_MAX_WORDS) {
+    return 'above-target';
+  }
+  return 'within-target';
+}
+
 export function generatePermanentPrompt(
-  selections: PermanentSelections,
+  selections: unknown,
   content: ValidatedMvpContent
-): string {
+): PermanentPromptResult {
   const profileValidation = validateProfile(selections, content);
   if (!profileValidation.valid) {
-    throw new MvpGenerationError(profileValidation.errors.join(' | '));
+    throw new MvpGenerationError(
+      [
+        profileValidation.missingQuestionIds.length > 0
+          ? `Missing: ${profileValidation.missingQuestionIds.join(', ')}`
+          : null,
+        profileValidation.unknownQuestionIds.length > 0
+          ? `Unknown questions: ${profileValidation.unknownQuestionIds.join(', ')}`
+          : null,
+        profileValidation.unknownOptionCodes.length > 0
+          ? `Unknown options: ${profileValidation.unknownOptionCodes.join(', ')}`
+          : null,
+      ]
+        .filter((v): v is string => Boolean(v))
+        .join(' | ')
+    );
   }
 
   const assembled: string[] = [content.sharedOpening];
   for (const questionId of content.questionOrder) {
-    const code = selections[questionId];
+    const code = (selections as PermanentSelections)[questionId];
     assembled.push(content.questions[questionId].options[code].moduleText);
   }
   assembled.push(content.sharedClosing);
@@ -81,7 +165,14 @@ export function generatePermanentPrompt(
     deduplicated.push(line);
   }
 
-  const prompt = deduplicated.join('\n');
+  if (deduplicated.length < 3) {
+    throw new MvpGenerationError('Permanent prompt assembly failed due to insufficient segments.');
+  }
+
+  const opening = deduplicated[0];
+  const closing = deduplicated[deduplicated.length - 1];
+  const middleModules = deduplicated.slice(1, deduplicated.length - 1);
+  const prompt = `${opening}\n${middleModules.join(' ')}\n${closing}`;
   const words = countWords(prompt);
 
   if (words > MAX_PERMANENT_WORDS) {
@@ -90,17 +181,22 @@ export function generatePermanentPrompt(
     );
   }
 
-  return prompt;
+  return {
+    prompt,
+    segments: deduplicated,
+    wordCount: words,
+    targetRangeStatus: toRangeStatus(words),
+  };
 }
 
 export function generateCapacityModifier(
   capacityId: CapacityId,
   content: ValidatedMvpContent
-): string {
+): string | null {
   const capacity = content.capacities[capacityId];
   if (!capacity) {
     throw new MvpGenerationError(`Unknown capacity ID: ${capacityId}`);
   }
 
-  return capacity.modifier ?? '';
+  return capacity.modifier;
 }

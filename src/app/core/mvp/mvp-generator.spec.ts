@@ -4,6 +4,7 @@ import {
   countWords,
   generateCapacityModifier,
   generatePermanentPrompt,
+  MvpGenerationError,
   validateProfile,
 } from './mvp-generator';
 import { CapacityId, OptionCode, PermanentQuestionId, PermanentSelections } from './mvp.types';
@@ -59,21 +60,21 @@ function allProfiles(order: readonly PermanentQuestionId[]): PermanentSelections
   return profiles;
 }
 
+function expectedSegmentsForProfile(
+  profile: PermanentSelections,
+  order: readonly PermanentQuestionId[],
+  content: ReturnType<typeof loadContent>
+): string[] {
+  return [
+    content.sharedOpening,
+    ...order.map((questionId) => content.questions[questionId].options[profile[questionId]].moduleText),
+    content.sharedClosing,
+  ];
+}
+
 describe('mvp-generator', () => {
-  it('validates profile completeness and option codes', () => {
+  it('validates profile with structured result fields', () => {
     const content = loadContent();
-
-    const invalid = validateProfile(
-      {
-        'starting-work': 'A',
-        'information-load': 'B',
-        'decision-support': 'C',
-      },
-      content
-    );
-
-    expect(invalid.valid).toBeFalse();
-    expect(invalid.errors.length).toBe(2);
 
     const valid = validateProfile(
       {
@@ -87,10 +88,42 @@ describe('mvp-generator', () => {
     );
 
     expect(valid.valid).toBeTrue();
-    expect(valid.errors).toEqual([]);
+    expect(valid.missingQuestionIds).toEqual([]);
+    expect(valid.unknownQuestionIds).toEqual([]);
+    expect(valid.unknownOptionCodes).toEqual([]);
   });
 
-  it('assembles a deterministic permanent prompt in fixed order', () => {
+  it('detects missing and unknown question ids plus invalid option codes', () => {
+    const content = loadContent();
+
+    const result = validateProfile(
+      {
+        'starting-work': 'A',
+        'information-load': 'B',
+        'decision-support': 'Z',
+        'unexpected-question': 'A',
+      },
+      content
+    );
+
+    expect(result.valid).toBeFalse();
+    expect(result.missingQuestionIds).toEqual(['side-topics', 'interruption-recovery']);
+    expect(result.unknownQuestionIds).toEqual(['unexpected-question']);
+    expect(result.unknownOptionCodes).toEqual(['decision-support:Z']);
+  });
+
+  it('treats malformed selection containers as invalid runtime input', () => {
+    const content = loadContent();
+    const malformedInputs: unknown[] = [null, undefined, 42, true, 'abc', ['A', 'B'], () => ({})];
+
+    for (const malformed of malformedInputs) {
+      const result = validateProfile(malformed, content);
+      expect(result.valid).withContext(String(malformed)).toBeFalse();
+      expect(result.missingQuestionIds).toEqual(content.questionOrder);
+    }
+  });
+
+  it('assembles deterministic prompt result with exact three-line formatting', () => {
     const content = loadContent();
     const profile: PermanentSelections = {
       'starting-work': 'B',
@@ -100,32 +133,74 @@ describe('mvp-generator', () => {
       'interruption-recovery': 'B',
     };
 
-    const prompt = generatePermanentPrompt(profile, content);
+    const result = generatePermanentPrompt(profile, content) as unknown as {
+      prompt: string;
+      segments: readonly string[];
+      wordCount: number;
+      targetRangeStatus: 'below-target' | 'within-target' | 'above-target';
+    };
 
-    const expected = [
-      content.sharedOpening,
-      'Break the work into a short ordered plan with concrete actions.',
-      'Start with a short summary, then add only the detail needed to act.',
-      'Compare the main options and tradeoffs concisely before concluding.',
-      'Briefly park useful side topics, then return to the current task.',
-      'Give a brief recap, then provide the next step.',
-      content.sharedClosing,
-    ].join('\n');
+    const expectedSegments = expectedSegmentsForProfile(profile, content.questionOrder, content);
+    const expectedPrompt = `${expectedSegments[0]}\n${expectedSegments.slice(1, 6).join(' ')}\n${expectedSegments[6]}`;
 
-    expect(prompt).toBe(expected);
-    expect(countWords(prompt)).toBe(countWords(expected));
+    expect(Array.isArray(result.segments)).toBeTrue();
+    expect(result.segments.length).toBe(7);
+    expect(result.segments).toEqual(expectedSegments);
+    expect(result.prompt).toBe(expectedPrompt);
+    expect(result.prompt.startsWith(' ')).toBeFalse();
+    expect(result.prompt.endsWith(' ')).toBeFalse();
+    expect(result.prompt.includes('\n\n')).toBeFalse();
+
+    const lines = result.prompt.split('\n');
+    expect(lines.length).toBe(3);
+    expect(lines[0]).toBe(content.sharedOpening);
+    expect(lines[1]).toBe(expectedSegments.slice(1, 6).join(' '));
+    expect(lines[2]).toBe(content.sharedClosing);
+    expect(lines[1].includes('  ')).toBeFalse();
+
+    expect(result.wordCount).toBe(countWords(result.prompt));
+    expect(result.targetRangeStatus).toBe('within-target');
   });
 
-  it('returns exact capacity modifier strings', () => {
+  it('returns null or exact authored capacity modifier strings', () => {
     const content = loadContent();
 
-    expect(generateCapacityModifier('usual', content)).toBe('');
+    expect(generateCapacityModifier('usual', content)).toBeNull();
     expect(generateCapacityModifier('limited', content)).toBe(
       'For this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask.'
     );
     expect(generateCapacityModifier('very-limited', content)).toBe(
       'For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it.'
     );
+  });
+
+  it('counts words canonically for edge cases', () => {
+    expect(countWords('')).toBe(0);
+    expect(countWords('   \t\n   ')).toBe(0);
+    expect(countWords('normal sentence')).toBe(2);
+    expect(countWords('many   spaces   here')).toBe(3);
+    expect(countWords('tabs\tbetween\ttokens')).toBe(3);
+    expect(countWords('newlines\nbetween\nwords')).toBe(3);
+    expect(countWords('...')).toBe(1);
+    expect(countWords('alpha — omega')).toBe(3);
+  });
+
+  it('throws when permanent prompt exceeds hard maximum', () => {
+    const content = loadContent();
+    const longContent = {
+      ...content,
+      sharedOpening: `${content.sharedOpening} ${new Array(200).fill('x').join(' ')}`,
+    };
+
+    const profile: PermanentSelections = {
+      'starting-work': 'A',
+      'information-load': 'A',
+      'decision-support': 'A',
+      'side-topics': 'A',
+      'interruption-recovery': 'A',
+    };
+
+    expect(() => generatePermanentPrompt(profile, longContent)).toThrowError(MvpGenerationError);
   });
 
   it('exhaustively validates all 243 permanent profiles', () => {
@@ -142,27 +217,47 @@ describe('mvp-generator', () => {
     for (const profile of profiles) {
       const validation = validateProfile(profile, content);
       expect(validation.valid).toBeTrue();
+      expect(validation.missingQuestionIds).toEqual([]);
+      expect(validation.unknownQuestionIds).toEqual([]);
+      expect(validation.unknownOptionCodes).toEqual([]);
 
-      const prompt = generatePermanentPrompt(profile, content);
-      const words = countWords(prompt);
+      const result = generatePermanentPrompt(profile, content);
+      const expectedSegments = expectedSegmentsForProfile(profile, content.questionOrder, content);
+      const expectedPrompt = `${expectedSegments[0]}\n${expectedSegments.slice(1, 6).join(' ')}\n${expectedSegments[6]}`;
 
-      minWords = Math.min(minWords, words);
-      maxWords = Math.max(maxWords, words);
+      minWords = Math.min(minWords, result.wordCount);
+      maxWords = Math.max(maxWords, result.wordCount);
 
-      if (words < 90) {
+      if (result.wordCount < 90) {
         belowTarget += 1;
       }
-      if (words > 140) {
+      if (result.wordCount > 140) {
         aboveTarget += 1;
       }
 
-      expect(words).withContext(prompt).toBeLessThanOrEqual(180);
-      expect(hasForbiddenTerms(prompt)).withContext(prompt).toEqual([]);
+      expect(result.segments.length).toBe(7);
+      expect(result.segments).toEqual(expectedSegments);
+      expect(result.prompt).toBe(expectedPrompt);
+      expect(result.prompt.split('\n').length).toBe(3);
+      expect(result.prompt).not.toContain('\n\n');
+      expect(result.prompt.startsWith(' ')).toBeFalse();
+      expect(result.prompt.endsWith(' ')).toBeFalse();
+      expect(countWords(result.prompt)).toBe(result.wordCount);
+      expect(result.wordCount).withContext(result.prompt).toBeLessThanOrEqual(180);
+      expect(hasForbiddenTerms(result.prompt)).withContext(result.prompt).toEqual([]);
 
-      const lines = prompt.split('\n');
-      expect(lines[0]).toBe(content.sharedOpening);
-      expect(lines[lines.length - 1]).toBe(content.sharedClosing);
-      expect(lines.length).toBe(7);
+      if (profile['starting-work'] === 'C' && profile['information-load'] === 'C') {
+        expect(result.prompt).toContain('Give the broader picture first, then recommend where to start.');
+        expect(result.prompt).toContain('Provide fuller context in a clear, scannable structure.');
+      }
+
+      const expectedStatus =
+        result.wordCount < 90
+          ? 'below-target'
+          : result.wordCount > 140
+            ? 'above-target'
+            : 'within-target';
+      expect(result.targetRangeStatus).toBe(expectedStatus);
     }
 
     console.info(
@@ -181,21 +276,29 @@ describe('mvp-generator', () => {
     let combinations = 0;
 
     for (const profile of profiles) {
-      const prompt = generatePermanentPrompt(profile, content);
-      expect(hasForbiddenTerms(prompt)).toEqual([]);
+      const baseResult = generatePermanentPrompt(profile, content);
+      expect(hasForbiddenTerms(baseResult.prompt)).toEqual([]);
 
       for (const capacityId of capacities) {
         combinations += 1;
+
+        const rerender = generatePermanentPrompt(profile, content);
+        expect(rerender.prompt).toBe(baseResult.prompt);
+        expect(rerender.wordCount).toBe(baseResult.wordCount);
+        expect(rerender.targetRangeStatus).toBe(baseResult.targetRangeStatus);
+        expect(rerender.segments).toEqual(baseResult.segments);
+
         const modifier = generateCapacityModifier(capacityId, content);
-        const forbidden = hasForbiddenTerms(modifier);
-        expect(forbidden).withContext(`${capacityId} | ${modifier}`).toEqual([]);
 
         if (capacityId === 'usual') {
-          expect(modifier).toBe('');
+          expect(modifier).toBeNull();
           continue;
         }
 
-        const words = countWords(modifier);
+        const forbidden = hasForbiddenTerms(modifier as string);
+        expect(forbidden).withContext(`${capacityId} | ${modifier as string}`).toEqual([]);
+
+        const words = countWords(modifier as string);
         expect(words).withContext(`${capacityId} modifier word count`).toBeGreaterThanOrEqual(20);
         expect(words).withContext(`${capacityId} modifier word count`).toBeLessThanOrEqual(40);
       }
