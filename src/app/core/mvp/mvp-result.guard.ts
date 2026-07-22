@@ -13,8 +13,13 @@ const PERMANENT_QUESTION_IDS: readonly PermanentQuestionId[] = [
 
 const OPTION_CODES: readonly OptionCode[] = ['A', 'B', 'C'];
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null && !Array.isArray(value);
+function isPlainObject(value: unknown): value is Record<string, unknown> {
+  if (typeof value !== 'object' || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const prototype = Object.getPrototypeOf(value);
+  return prototype === Object.prototype || prototype === null;
 }
 
 function isOptionCode(value: unknown): value is OptionCode {
@@ -22,7 +27,7 @@ function isOptionCode(value: unknown): value is OptionCode {
 }
 
 export function isMvpResultEligible(selections: unknown): selections is PermanentSelections {
-  if (!isRecord(selections)) {
+  if (!isPlainObject(selections)) {
     return false;
   }
 

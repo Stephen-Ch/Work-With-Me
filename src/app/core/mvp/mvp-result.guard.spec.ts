@@ -25,6 +25,14 @@ function validProfile(): EligibleProfile {
   };
 }
 
+class ProfileCarrier {
+  'starting-work' = 'A' as const;
+  'information-load' = 'B' as const;
+  'decision-support' = 'C' as const;
+  'side-topics' = 'A' as const;
+  'interruption-recovery' = 'B' as const;
+}
+
 describe('isMvpResultEligible', () => {
   it('returns true for a valid complete five-answer profile', () => {
     expect(isMvpResultEligible(validProfile())).toBeTrue();
@@ -80,6 +88,34 @@ describe('isMvpResultEligible', () => {
     };
 
     expect(isMvpResultEligible(legacy)).toBeFalse();
+  });
+
+  it('returns false for Object.create({}) profiles even with valid keys and values', () => {
+    const profile = Object.create({}) as Record<string, unknown>;
+    Object.assign(profile, validProfile());
+
+    expect(isMvpResultEligible(profile)).toBeFalse();
+  });
+
+  it('returns false for class-instance profiles even with valid keys and values', () => {
+    const profile = new ProfileCarrier();
+
+    expect(isMvpResultEligible(profile)).toBeFalse();
+  });
+
+  it('returns false when prototype is neither Object.prototype nor null', () => {
+    const customPrototype = { marker: true };
+    const profile = Object.create(customPrototype) as Record<string, unknown>;
+    Object.assign(profile, validProfile());
+
+    expect(isMvpResultEligible(profile)).toBeFalse();
+  });
+
+  it('returns true for Object.create(null) when valid keys and values are present', () => {
+    const profile = Object.create(null) as Record<string, unknown>;
+    Object.assign(profile, validProfile());
+
+    expect(isMvpResultEligible(profile)).toBeTrue();
   });
 });
 
