@@ -27,7 +27,13 @@ All decisions in this file are locked for first MVP implementation planning.
 | Business value wording | Helps people get AI responses that are easier to understand, act on, and apply. |
 | Claims policy | Do not claim measured productivity improvement. |
 | Generation method | Prompt generation is deterministic from fixed authored modules and fixed assembly rules. |
+| Assembly order | Permanent prompt order is fixed: Shared opening, selected Q1 module, selected Q2 module, selected Q3 module, selected Q4 module, selected Q5 module, Shared closing. |
+| Selection cardinality | Exactly one module is selected from each question for every permanent prompt. |
 | Generator constraints | No AI model call, no dynamic paraphrasing, no trait inference, no instruction invention. |
+| Text-integrity constraints | No shortening, rewriting, semantic merging, dynamic alternate wording, or semantic redundancy inference across authored module strings. |
+| Duplicate defense | After fixed-order assembly, remove only full-string duplicates that are exactly equal after whitespace normalization. Preserve first occurrence. |
+| Duplicate-normalization scope | Duplicate comparison may trim outer whitespace and collapse consecutive whitespace to one space only. |
+| Duplicate expectation | No current authored modules are expected to be exact duplicates; duplicate defense is integrity-only. |
 
 ## MVP Readiness Note
 No unresolved implementation decisions remain for first MVP scope in this document set.

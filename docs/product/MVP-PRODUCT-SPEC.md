@@ -114,11 +114,20 @@ The capacity modifier must not suppress explicitly requested depth, options, for
 
 ## Deterministic Generation Requirements
 - Prompt generation must use fixed authored modules.
-- Assembly rules must be deterministic.
+- Prompt assembly order is fixed: Shared opening, selected Q1 module, selected Q2 module, selected Q3 module, selected Q4 module, selected Q5 module, Shared closing.
+- Exactly one module is selected from each question.
 - The generator must not call an AI model.
+- The generator must not shorten authored module text.
 - The generator must not paraphrase modules dynamically.
+- The generator must not rewrite modules dynamically.
+- The generator must not merge module text based on meaning.
+- The generator must not select alternate wording dynamically.
+- The generator must not infer that differently worded authored strings are redundant.
 - The generator must not infer user traits.
 - The generator must not invent extra instructions.
+- The only duplicate defense is exact full-string duplicate removal after whitespace-normalized comparison.
+- Duplicate comparison normalization may only trim leading and trailing whitespace and collapse consecutive whitespace to one space.
+- No current authored modules are expected to be exact duplicates; this guard is defensive integrity only.
 
 ## Accessibility and Privacy Principles
 - Keep language plain and actionable.
@@ -139,6 +148,7 @@ The capacity modifier must not suppress explicitly requested depth, options, for
 - Exactly three answer choices for each required question.
 - Exactly 15 permanent modules (one per answer choice).
 - Exactly three capacity-state definitions.
+- Exactly one selected module per question in generated permanent prompts.
 - No free-text feature in first MVP.
 - Platform-neutral output only.
 - Preview and copy enabled; in-product edit disabled.

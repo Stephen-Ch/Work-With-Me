@@ -10,17 +10,32 @@ If a user prompt is already clear and well specified, the response should not be
 Layer 1 validates generator output text only. These tests do not call an AI model.
 
 ### Deterministic Assertions
-- Exact module selection from five answers.
-- Exact sentence assembly order.
-- Exact module ordering per catalog.
-- Deterministic deduplication behavior.
-- Shared explicit-override sentence present in every permanent prompt.
-- No forbidden condition-related terms in generated output.
-- No duplicate instruction lines after assembly.
-- Permanent prompt within word-count limits.
+- Exactly one selected module per question from five answers.
+- Exact assembly order: opening, selected Q1, selected Q2, selected Q3, selected Q4, selected Q5, closing.
+- Exact authored module text preserved with no shortening or rewriting.
+- Shared opening exact match.
+- Shared closing exact match.
+- Exact duplicate defense behavior only.
+- Forbidden-term scan on generated outputs only.
+- No exact duplicate full strings after defensive duplicate check.
+- Permanent prompt hard maximum of 180 words.
 - No capacity modifier for Usual bandwidth.
-- Correct Limited bandwidth modifier text.
-- Correct Very limited bandwidth modifier text.
+- Correct Limited bandwidth modifier exact text.
+- Correct Very limited bandwidth modifier exact text.
+
+Forbidden-term scan list for generated permanent prompts and capacity modifiers only (case-insensitive):
+- ADHD
+- burnout
+- neurotypical
+- diagnosis
+- diagnose
+- diagnostic
+- disorder
+- impairment
+- disability
+- disabled
+- medical condition
+- mental health condition
 
 ### Exhaustive Coverage Requirements
 - All permanent profiles: $3^5 = 243$ combinations must be generated and checked.
@@ -32,16 +47,19 @@ Layer 1 validates generator output text only. These tests do not call an AI mode
 | Test ID | Scope | Input | Expected deterministic output rule | Prohibited output | Pass / Fail rule |
 |---|---|---|---|---|---|
 | G01 | Module selection | Any single profile | Exactly 5 permanent modules selected, one per question area | Missing or extra permanent module | PASS if exactly 5 modules map from answers. |
-| G02 | Assembly order | Any single profile | Output order: opening, Q1, Q2, Q3, Q4, Q5, closing | Any sentence-order drift | PASS if line order is exact. |
-| G03 | Deduplication | Overlap-heavy profile | Overlapping instructions collapsed by catalog rules | Repeated duplicate intent sentence | PASS if only one final sentence per duplicate intent remains. |
-| G04 | Override line presence | Any profile | Closing override sentence always present | Missing override sentence | PASS if closing text matches catalog exactly. |
-| G05 | No forbidden condition terms | Any profile | Output contains no condition-related terms | Condition-related terms appear | PASS if regex scan returns zero matches. |
-| G06 | Permanent length limit | Any profile | Permanent prompt 90-140 words, hard max 180 | Over 180 words | PASS if within configured range and under hard max. |
-| G07 | Capacity usual | Any profile + Usual bandwidth | No capacity modifier returned | Any non-empty modifier string | PASS if modifier output is empty. |
-| G08 | Capacity limited | Any profile + Limited bandwidth | Exact limited modifier string returned | Paraphrased or altered modifier | PASS if exact string match. |
-| G09 | Capacity very limited | Any profile + Very limited bandwidth | Exact very-limited modifier string returned | Paraphrased or altered modifier | PASS if exact string match. |
-| G10 | Exhaustive permanent coverage | 243 permanent profiles | All 243 generated and validated | Missing profile combinations | PASS if profile count equals 243 and all pass G01-G07. |
-| G11 | Exhaustive profile-capacity coverage | 729 profile-capacity combinations | All 729 generated and validated | Missing profile-capacity combinations | PASS if combination count equals 729 and all pass G01-G09. |
+| G02 | Assembly order | Any single profile | Output order is exact: opening, selected Q1, selected Q2, selected Q3, selected Q4, selected Q5, closing | Any order drift | PASS if order is exact. |
+| G03 | Exact text integrity | Any single profile | Each selected module string appears exactly as authored | Any shortened, rewritten, or dynamically altered module string | PASS if all selected strings are exact authored matches. |
+| G04 | Shared boundary strings | Any profile | Shared opening and shared closing exactly match authored strings | Opening/closing text mismatch | PASS if opening and closing are exact string matches. |
+| G05 | Exact duplicate defense | Profile where two complete strings are made identical in fixture data | Assemble fixed order first; normalize whitespace for duplicate comparison only; remove only complete strings exactly equal to earlier complete strings; preserve survivor text unmodified | Removal of related but differently worded strings, or text rewriting | PASS if only exact duplicate full strings are removed and all surviving strings are unchanged. |
+| G06 | Cross-question overlap retention | Profile Q1-C + Q2-C + any Q3/Q4/Q5 | Both Q1-C and Q2-C exact authored instructions remain in output | Semantic merge, shortening, or dropping either line | PASS if both exact strings appear in their fixed positions. |
+| G07 | Forbidden-term scan | Any profile | Case-insensitive scan over generated permanent prompt and generated capacity modifier only returns zero forbidden terms | Any listed forbidden term in generated outputs | PASS if zero matches across generated outputs. |
+| G08 | Permanent hard limit and target reporting | Any profile | Permanent prompt must be <= 180 words; 90-140 words is reported as target compliance metadata | Output > 180 words; silent normalization/rewrite to force target range | FAIL if > 180 words. REPORT (not fail) if < 90 or > 140. |
+| G09 | Capacity usual | Any profile + Usual bandwidth | No capacity modifier returned | Any non-empty modifier string | PASS if modifier output is empty. |
+| G10 | Capacity limited | Any profile + Limited bandwidth | Exact limited modifier string returned | Paraphrased or altered modifier | PASS if exact string match. |
+| G11 | Capacity very limited | Any profile + Very limited bandwidth | Exact very-limited modifier string returned | Paraphrased or altered modifier | PASS if exact string match. |
+| G12 | Five-module cardinality in exhaustive run | 243 permanent profiles | Exactly five permanent module strings appear before shared closing for every valid profile | Fewer or more than five module strings before closing | PASS if all 243 outputs contain exactly five ordered module strings before closing. |
+| G13 | Exhaustive permanent coverage | 243 permanent profiles | All 243 generated and validated | Missing profile combinations | PASS if profile count equals 243 and all pass G01-G09 and G12. |
+| G14 | Exhaustive profile-capacity coverage | 729 profile-capacity combinations | All 729 generated and validated | Missing profile-capacity combinations | PASS if combination count equals 729 and all pass G01-G12 plus capacity exact-string checks. |
 
 ## Layer 2: Behavioral Effectiveness Tests
 Layer 2 is manual validation against an AI assistant. These tests are not deterministic.
@@ -70,6 +88,11 @@ Layer 2 is manual validation against an AI assistant. These tests are not determ
 - Limited bandwidth modifier: 20-40 words.
 - Very limited bandwidth modifier: 20-40 words.
 - Usual bandwidth: no modifier.
+
+Automated exhaustive behavior:
+- FAIL when permanent prompt exceeds 180 words.
+- REPORT (do not fail) permanent profiles below 90 words or above 140 words.
+- Do not rewrite generated content to force target-range compliance.
 
 ## Test Execution Notes
 - Layer 1 is deterministic and automated in future implementation.
