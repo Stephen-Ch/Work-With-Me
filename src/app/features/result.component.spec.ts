@@ -1,6 +1,6 @@
 /**
  * MVP ResultComponent tests.
- * @proves deterministic permanent prompt behavior and optional temporary capacity modifier flow.
+ * @proves deterministic permanent prompt behavior and one-copy composed instructions flow.
  */
 import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
@@ -10,7 +10,11 @@ import { MvpContentService, MvpContentState } from '../core/mvp/mvp-content.serv
 import { MvpSessionStore, MVP_SESSION_NOW, MVP_SESSION_STORAGE_KEY } from '../core/mvp/mvp-session.store';
 import { validateMvpContent } from '../core/mvp/mvp-content.repository';
 import rawMvpContent from '../../assets/content/mvp-content.json';
-import { generateCapacityModifier, generatePermanentPrompt } from '../core/mvp/mvp-generator';
+import {
+  composeInstructionsForCopy,
+  generateCapacityModifier,
+  generatePermanentPrompt,
+} from '../core/mvp/mvp-generator';
 import { CapacityId } from '../core/mvp/mvp.types';
 
 function validatedContent() {
@@ -116,7 +120,14 @@ describe('ResultComponent (MVP)', () => {
     expect(preview).toBeTruthy();
     expect(preview.textContent).toBe(expectedPrompt);
     expect(btn).toBeTruthy();
-    expect(btn.textContent.trim()).toBe('Copy permanent prompt');
+    expect(btn.textContent.trim()).toBe('Copy instructions');
+  });
+
+  it('renders one copy action and one copy status region', () => {
+    expect(fixture.nativeElement.querySelectorAll('[data-testid="copy-btn"]').length).toBe(1);
+    expect(fixture.nativeElement.querySelectorAll('[aria-live="polite"]').length).toBe(1);
+    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
+    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-status"]')).toBeNull();
   });
 
   it('renders exact capacity question and labels', () => {
@@ -139,43 +150,53 @@ describe('ResultComponent (MVP)', () => {
     expect(new Set(radios.map((radio) => radio.name)).size).toBe(1);
   });
 
-  it('with no capacity selected shows no modifier preview and no temporary copy action', () => {
+  it('with no capacity selected preview stays permanent-only', () => {
     expect(component.selectedCapacity()).toBeNull();
     expect(component.capacityModifierText()).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-modifier-preview"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
+
+    const expectedPrompt = generatePermanentPrompt(profile, content).prompt;
+    expect(component.composedInstructionsText()).toBe(expectedPrompt);
+    expect((fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement).textContent).toBe(expectedPrompt);
   });
 
-  it('usual bandwidth persists but shows no modifier preview and no temporary copy action', async () => {
+  it('usual bandwidth persists and keeps preview permanent-only with explanatory note', async () => {
     await createComponentWithCapacity('usual');
 
     expect(component.selectedCapacity()).toBe('usual');
     expect(component.capacityModifierText()).toBeNull();
     expect(fixture.nativeElement.querySelector('[data-testid="capacity-usual-note"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-modifier-preview"]')).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
+
+    const expectedPrompt = generatePermanentPrompt(profile, content).prompt;
+    expect(component.composedInstructionsText()).toBe(expectedPrompt);
   });
 
-  it('limited bandwidth shows exact authored modifier', () => {
+  it('limited bandwidth composes permanent plus exact modifier with one blank line', () => {
     component.setCapacity('limited');
     fixture.detectChanges();
 
-    expect(component.capacityModifierText()).toBe(generateCapacityModifier('limited', content));
-    const preview = fixture.nativeElement.querySelector('[data-testid="capacity-modifier-preview"]') as HTMLElement;
-    expect(preview.textContent?.trim()).toBe(
-      'For this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask.'
-    );
+    const expectedPrompt = generatePermanentPrompt(profile, content).prompt;
+    const limitedModifier = generateCapacityModifier('limited', content);
+    const expected = composeInstructionsForCopy(expectedPrompt, limitedModifier);
+
+    expect(component.composedInstructionsText()).toBe(expected);
+    expect(expected).toContain('\n\n');
+    expect(expected.endsWith('\n')).toBeFalse();
+    expect(expected.split('\n\n').length).toBe(2);
+    expect((fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement).textContent).toBe(expected);
   });
 
-  it('very limited bandwidth shows exact authored modifier', () => {
+  it('very limited bandwidth composes permanent plus exact modifier with one blank line', () => {
     component.setCapacity('very-limited');
     fixture.detectChanges();
 
-    expect(component.capacityModifierText()).toBe(generateCapacityModifier('very-limited', content));
-    const preview = fixture.nativeElement.querySelector('[data-testid="capacity-modifier-preview"]') as HTMLElement;
-    expect(preview.textContent?.trim()).toBe(
-      'For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it.'
-    );
+    const expectedPrompt = generatePermanentPrompt(profile, content).prompt;
+    const modifier = generateCapacityModifier('very-limited', content);
+    const expected = composeInstructionsForCopy(expectedPrompt, modifier);
+
+    expect(component.composedInstructionsText()).toBe(expected);
+    expect(expected).toContain('\n\n');
+    expect(expected.endsWith('\n')).toBeFalse();
+    expect((fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement).textContent).toBe(expected);
   });
 
   it('selecting a capacity calls setCapacity on the session store', () => {
@@ -216,17 +237,30 @@ describe('ResultComponent (MVP)', () => {
     expect(afterUsual).toBe(before);
   });
 
-  it('renders separate permanent and temporary copy controls and statuses', () => {
+  it('capacity change updates preview and clears stale copy status', async () => {
+    const writeText = jasmine.createSpy('writeText').and.resolveTo();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
     component.setCapacity('limited');
     fixture.detectChanges();
+    const previewAfterLimited = component.composedInstructionsText() as string;
 
-    expect(fixture.nativeElement.querySelector('[data-testid="copy-btn"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('[data-testid="copy-status"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeTruthy();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-status"]')).toBeTruthy();
+    await component.copyInstructions();
+    fixture.detectChanges();
+    expect(component.copyStatus()).toBe('Instructions copied to clipboard.');
+
+    component.setCapacity('very-limited');
+    fixture.detectChanges();
+
+    const previewAfterVeryLimited = component.composedInstructionsText() as string;
+    expect(previewAfterVeryLimited).not.toBe(previewAfterLimited);
+    expect(component.copyStatus()).toBe('');
   });
 
-  it('copies exactly the visible prompt and announces success', async () => {
+  it('preview exactly equals copy target for permanent-only case', async () => {
     const writeText = jasmine.createSpy('writeText').and.resolveTo();
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
@@ -235,101 +269,102 @@ describe('ResultComponent (MVP)', () => {
 
     const preview = fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement;
 
-    await component.copyPermanentPrompt();
+    await component.copyInstructions();
     fixture.detectChanges();
 
     expect(writeText).toHaveBeenCalledOnceWith(preview.textContent as string);
     expect(component.copyStatus()).toContain('copied');
   });
 
-  it('shows copy failure guidance when clipboard write fails', async () => {
-    const writeText = jasmine.createSpy('writeText').and.rejectWith(new Error('blocked'));
-    Object.defineProperty(navigator, 'clipboard', {
-      configurable: true,
-      value: { writeText },
-    });
-
-    await component.copyPermanentPrompt();
-    fixture.detectChanges();
-
-    expect(component.copyStatus()).toBe('Copy failed');
-    expect(fixture.nativeElement.querySelector('[data-testid="copy-fallback"]')).toBeTruthy();
-  });
-
-  it('copies the exact displayed temporary modifier and reports success', async () => {
-    component.setCapacity('limited');
-    fixture.detectChanges();
-
+  it('preview exactly equals copy target for limited composed case', async () => {
     const writeText = jasmine.createSpy('writeText').and.resolveTo();
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
     });
 
-    const preview = fixture.nativeElement.querySelector('[data-testid="capacity-modifier-preview"]') as HTMLElement;
+    component.setCapacity('limited');
+    fixture.detectChanges();
 
-    await component.copyCapacityModifier();
+    const preview = fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement;
+
+    await component.copyInstructions();
     fixture.detectChanges();
 
     expect(writeText).toHaveBeenCalledOnceWith(preview.textContent as string);
-    expect(component.temporaryCopyStatus()).toBe('Temporary modifier copied to clipboard.');
   });
 
-  it('shows temporary modifier copy failure guidance without affecting permanent copy status', async () => {
+  it('preview exactly equals copy target for very-limited composed case', async () => {
+    const writeText = jasmine.createSpy('writeText').and.resolveTo();
+    Object.defineProperty(navigator, 'clipboard', {
+      configurable: true,
+      value: { writeText },
+    });
+
     component.setCapacity('very-limited');
     fixture.detectChanges();
 
+    const preview = fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement;
+
+    await component.copyInstructions();
+    fixture.detectChanges();
+
+    expect(writeText).toHaveBeenCalledOnceWith(preview.textContent as string);
+  });
+
+  it('limited to very-limited replacement does not duplicate modifiers', () => {
+    const limitedModifier = generateCapacityModifier('limited', content) as string;
+    const veryLimitedModifier = generateCapacityModifier('very-limited', content) as string;
+
+    component.setCapacity('limited');
+    fixture.detectChanges();
+
+    component.setCapacity('very-limited');
+    fixture.detectChanges();
+
+    const preview = component.composedInstructionsText() as string;
+    expect(preview).toContain(veryLimitedModifier);
+    expect(preview).not.toContain(`${limitedModifier}\n\n${veryLimitedModifier}`);
+    expect(preview.includes(limitedModifier)).toBeFalse();
+  });
+
+  it('there is no second copy control in any capacity state', () => {
+    const assertSingleCopyButton = () => {
+      expect(fixture.nativeElement.querySelectorAll('[data-testid="copy-btn"]').length).toBe(1);
+      expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
+    };
+
+    assertSingleCopyButton();
+    component.setCapacity('usual');
+    fixture.detectChanges();
+    assertSingleCopyButton();
+    component.setCapacity('limited');
+    fixture.detectChanges();
+    assertSingleCopyButton();
+    component.setCapacity('very-limited');
+    fixture.detectChanges();
+    assertSingleCopyButton();
+  });
+
+  it('shows copy failure guidance for the single combined preview', async () => {
     const writeText = jasmine.createSpy('writeText').and.rejectWith(new Error('blocked'));
     Object.defineProperty(navigator, 'clipboard', {
       configurable: true,
       value: { writeText },
     });
 
-    await component.copyCapacityModifier();
+    await component.copyInstructions();
     fixture.detectChanges();
 
-    expect(component.temporaryCopyStatus()).toBe('Copy failed');
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-fallback"]')).toBeTruthy();
-    expect(component.copyStatus()).toBe('');
+    expect(component.copyStatus()).toBe('Copy failed');
+    const fallback = fixture.nativeElement.querySelector('[data-testid="copy-fallback"]') as HTMLElement;
+    expect(fallback).toBeTruthy();
+    expect(fallback.textContent).toContain('combined Instructions to copy block');
   });
 
-  it('does not show temporary copy control when no capacity is selected', () => {
-    expect(component.selectedCapacity()).toBeNull();
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
-  });
-
-  it('does not show temporary copy control for usual bandwidth', async () => {
-    await createComponentWithCapacity('usual');
-
-    expect(fixture.nativeElement.querySelector('[data-testid="capacity-copy-btn"]')).toBeNull();
-  });
-
-  it('startOver clears MVP session and routes home', () => {
-    sessionStorage.setItem('unrelated-key', 'keep-me');
-    component.setCapacity('limited');
-    fixture.detectChanges();
-
-    component.startOver();
-
-    expect(sessionStore.session()).toBeNull();
-    expect(sessionStorage.getItem('unrelated-key')).toBe('keep-me');
-    expect(router.navigate).toHaveBeenCalledWith(['/']);
-  });
-
-  it('persists selected capacity through recreated component/store hydration', async () => {
-    component.setCapacity('very-limited');
-    fixture.detectChanges();
-
-    await createComponentWithCapacity('very-limited');
-
-    expect(component.selectedCapacity()).toBe('very-limited');
-    expect(component.capacityModifierText()).toBe(
-      'For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it.'
-    );
-  });
-
-  it('keeps the same prompt after component reload in the same browser session', async () => {
-    const firstPrompt = (fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement).textContent;
+  it('reload reproduces same composed preview for persisted capacity', async () => {
+    await createComponentWithCapacity('limited');
+    const firstPreview = component.composedInstructionsText();
 
     fixture = TestBed.createComponent(ResultComponent);
     component = fixture.componentInstance;
@@ -337,13 +372,58 @@ describe('ResultComponent (MVP)', () => {
     await fixture.whenStable();
     fixture.detectChanges();
 
-    const secondPrompt = (fixture.nativeElement.querySelector('[data-testid="document-preview"]') as HTMLElement).textContent;
-    expect(secondPrompt).toBe(firstPrompt);
+    expect(component.selectedCapacity()).toBe('limited');
+    expect(component.composedInstructionsText()).toBe(firstPreview);
   });
 
-  it('does not render feedback form', () => {
+  it('reload with very-limited keeps permanent prompt unchanged in composed preview', async () => {
+    await createComponentWithCapacity('very-limited');
+
+    const permanentPrompt = component.promptText();
+    const veryLimitedModifier = generateCapacityModifier('very-limited', content);
+    const expectedComposed = composeInstructionsForCopy(permanentPrompt as string, veryLimitedModifier);
+
+    expect(component.composedInstructionsText()).toBe(expectedComposed);
+    expect(component.promptText()).toBe(generatePermanentPrompt(profile, content).prompt);
+  });
+
+  it('returns to permanent-only preview when capacity changes from limited to usual', () => {
+    const expectedPrompt = generatePermanentPrompt(profile, content).prompt;
+
+    component.setCapacity('limited');
+    fixture.detectChanges();
+    expect(component.composedInstructionsText()).not.toBe(expectedPrompt);
+
+    component.setCapacity('usual');
+    fixture.detectChanges();
+    expect(component.composedInstructionsText()).toBe(expectedPrompt);
+  });
+
+  it('startOver clears MVP session, including capacity, and routes home', () => {
+    sessionStorage.setItem('unrelated-key', 'keep-me');
+    component.setCapacity('limited');
+    fixture.detectChanges();
+
+    component.startOver();
+
+    expect(sessionStore.session()).toBeNull();
+    expect(sessionStore.capacity()).toBeNull();
+    expect(sessionStorage.getItem('unrelated-key')).toBe('keep-me');
+    expect(router.navigate).toHaveBeenCalledWith(['/']);
+  });
+
+  it('shows no feedback form links', () => {
     const text = fixture.nativeElement.textContent;
     expect(text).not.toContain('forms.gle');
     expect(text).not.toContain('Share feedback');
+  });
+
+  it('includes visible explanation about permanent and temporary behavior', () => {
+    const explainer = fixture.nativeElement.querySelector('[data-testid="workflow-explainer"]') as HTMLElement;
+    const text = explainer.textContent ?? '';
+
+    expect(text).toContain('five answers create reusable permanent instructions');
+    expect(text).toContain('temporary for this AI conversation only');
+    expect(text).toContain('does not change your saved permanent preferences');
   });
 });

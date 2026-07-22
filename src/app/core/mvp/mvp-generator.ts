@@ -200,3 +200,14 @@ export function generateCapacityModifier(
 
   return capacity.modifier;
 }
+
+export function composeInstructionsForCopy(
+  permanentPrompt: string,
+  capacityModifier: string | null
+): string {
+  if (!capacityModifier) {
+    return permanentPrompt;
+  }
+
+  return `${permanentPrompt}\n\n${capacityModifier}`;
+}

@@ -1,19 +1,18 @@
 import { ChangeDetectionStrategy, Component, OnInit, computed, inject, signal } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { Router } from '@angular/router';
-import { generateCapacityModifier, generatePermanentPrompt } from '../core/mvp/mvp-generator';
+import {
+  composeInstructionsForCopy,
+  generateCapacityModifier,
+  generatePermanentPrompt,
+} from '../core/mvp/mvp-generator';
 import { MvpContentService } from '../core/mvp/mvp-content.service';
 import { MvpSessionStore } from '../core/mvp/mvp-session.store';
 import { isMvpResultEligible } from '../core/mvp/mvp-result.guard';
 import { CapacityId } from '../core/mvp/mvp.types';
 
-const PERMANENT_COPY_IDLE = 'Copy permanent prompt';
-const PERMANENT_COPY_SUCCESS = 'Copied';
+const COPY_BUTTON_LABEL = 'Copy instructions';
 const PERMANENT_COPY_FAILURE = 'Copy failed';
-
-const TEMPORARY_COPY_IDLE = 'Copy temporary modifier';
-const TEMPORARY_COPY_SUCCESS = 'Copied';
-const TEMPORARY_COPY_FAILURE = 'Copy failed';
 
 const CAPACITY_QUESTION = 'How much bandwidth do you have right now?';
 
@@ -41,46 +40,16 @@ const CAPACITY_ORDER: readonly CapacityId[] = ['usual', 'limited', 'very-limited
       } @else if (promptText(); as prompt) {
         <header class="text-center space-y-2">
           <h2 class="text-2xl font-bold text-gray-900">Your permanent instructions are ready</h2>
-          <p class="text-gray-600 text-sm">Copy this exactly, then paste it at the top of a new AI conversation.</p>
-        </header>
-
-        <div class="flex flex-col sm:flex-row gap-3">
-          <button
-            data-testid="copy-btn"
-            (click)="copyPermanentPrompt()"
-            class="flex-1 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-            {{ copyLabel() }}
-          </button>
-          <button
-            data-testid="start-over-btn"
-            (click)="startOver()"
-            class="flex-1 py-3 px-5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
-            Start Over
-          </button>
-        </div>
-
-        <p class="text-sm text-gray-700" data-testid="copy-status" aria-live="polite">{{ copyStatus() }}</p>
-
-        <div class="border border-gray-200 rounded-lg overflow-hidden">
-          <div class="bg-gray-100 px-4 py-2 text-xs text-gray-500 font-semibold border-b border-gray-200">
-            Permanent prompt
-          </div>
-          <pre
-            data-testid="document-preview"
-            class="p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed">{{ prompt }}</pre>
-        </div>
-
-        @if (copyStatus() === copyFailureText) {
-          <p class="text-sm text-amber-700" data-testid="copy-fallback">
-            Copy failed. Select the prompt text manually and copy with your keyboard.
+          <p class="text-gray-600 text-sm" data-testid="workflow-explainer">
+            Your five answers create reusable permanent instructions. The final paragraph, when shown, is temporary for this AI conversation only. Changing bandwidth does not change your saved permanent preferences.
           </p>
-        }
+        </header>
 
         <section class="border border-gray-200 rounded-xl p-4 space-y-4" data-testid="capacity-section">
           <div class="space-y-1">
             <h3 class="text-lg font-semibold text-gray-900">Temporary session modifier (optional)</h3>
             <p class="text-sm text-gray-600">
-              This does not change your permanent Work With Me instructions. Use it only for this AI conversation.
+              Select your current bandwidth to optionally append a temporary final paragraph to the copy block below.
             </p>
           </div>
 
@@ -107,37 +76,41 @@ const CAPACITY_ORDER: readonly CapacityId[] = ['usual', 'limited', 'very-limited
               <p class="text-sm text-gray-700" data-testid="capacity-usual-note">
                 Usual bandwidth selected. No temporary modifier is needed.
               </p>
-            } @else if (capacityModifierText(); as modifier) {
-              <div class="space-y-3" data-testid="capacity-modifier-section">
-                <div class="border border-gray-200 rounded-lg overflow-hidden">
-                  <div class="bg-gray-100 px-4 py-2 text-xs text-gray-500 font-semibold border-b border-gray-200">
-                    Temporary capacity modifier
-                  </div>
-                  <pre
-                    data-testid="capacity-modifier-preview"
-                    class="p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed">{{ modifier }}</pre>
-                </div>
-
-                <button
-                  data-testid="capacity-copy-btn"
-                  (click)="copyCapacityModifier()"
-                  class="w-full sm:w-auto py-2.5 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
-                  {{ temporaryCopyLabel() }}
-                </button>
-
-                <p class="text-sm text-gray-700" data-testid="capacity-copy-status" aria-live="polite">
-                  {{ temporaryCopyStatus() }}
-                </p>
-
-                @if (temporaryCopyStatus() === temporaryCopyFailureText) {
-                  <p class="text-sm text-amber-700" data-testid="capacity-copy-fallback">
-                    Copy failed. Select the temporary modifier text manually and copy with your keyboard.
-                  </p>
-                }
-              </div>
             }
           }
         </section>
+
+        <div class="flex flex-col sm:flex-row gap-3">
+          <button
+            data-testid="copy-btn"
+            (click)="copyInstructions()"
+            class="flex-1 py-3 px-5 bg-blue-600 text-white font-semibold rounded-lg hover:bg-blue-700 transition-colors">
+            {{ copyButtonLabel }}
+          </button>
+          <button
+            data-testid="start-over-btn"
+            (click)="startOver()"
+            class="flex-1 py-3 px-5 border border-gray-300 text-gray-700 font-semibold rounded-lg hover:bg-gray-50 transition-colors">
+            Start Over
+          </button>
+        </div>
+
+        <p class="text-sm text-gray-700" data-testid="copy-status" aria-live="polite">{{ copyStatus() }}</p>
+
+        <div class="border border-gray-200 rounded-lg overflow-hidden">
+          <div class="bg-gray-100 px-4 py-2 text-xs text-gray-500 font-semibold border-b border-gray-200">
+            Instructions to copy
+          </div>
+          <pre
+            data-testid="document-preview"
+            class="p-4 text-sm text-gray-800 whitespace-pre-wrap font-mono overflow-x-auto leading-relaxed">{{ composedInstructionsText() }}</pre>
+        </div>
+
+        @if (copyStatus() === copyFailureText) {
+          <p class="text-sm text-amber-700" data-testid="copy-fallback">
+            Copy failed. Select the combined Instructions to copy block manually and copy with your keyboard.
+          </p>
+        }
       }
     </div>
   `
@@ -153,13 +126,9 @@ export class ResultComponent implements OnInit {
   readonly selections = this.sessionStore.permanentSelections;
   readonly selectedCapacity = this.sessionStore.capacity;
 
+  readonly copyButtonLabel = COPY_BUTTON_LABEL;
   readonly copyFailureText = PERMANENT_COPY_FAILURE;
-  readonly copyLabel = signal(PERMANENT_COPY_IDLE);
   readonly copyStatus = signal('');
-
-  readonly temporaryCopyFailureText = TEMPORARY_COPY_FAILURE;
-  readonly temporaryCopyLabel = signal(TEMPORARY_COPY_IDLE);
-  readonly temporaryCopyStatus = signal('');
 
   readonly capacityQuestion = CAPACITY_QUESTION;
 
@@ -202,48 +171,36 @@ export class ResultComponent implements OnInit {
     }
   });
 
+  readonly composedInstructionsText = computed(() => {
+    const prompt = this.promptText();
+    if (!prompt) {
+      return null;
+    }
+
+    return composeInstructionsForCopy(prompt, this.capacityModifierText());
+  });
+
   ngOnInit(): void {
     void this.initialize();
   }
 
-  async copyPermanentPrompt(): Promise<void> {
-    const text = this.promptText();
+  async copyInstructions(): Promise<void> {
+    const text = this.composedInstructionsText();
     if (!text) {
       return;
     }
 
     try {
       await navigator.clipboard.writeText(text);
-      this.copyLabel.set(PERMANENT_COPY_SUCCESS);
-      this.copyStatus.set('Permanent prompt copied to clipboard.');
+      this.copyStatus.set('Instructions copied to clipboard.');
     } catch {
-      this.copyLabel.set(PERMANENT_COPY_FAILURE);
       this.copyStatus.set(PERMANENT_COPY_FAILURE);
-    }
-  }
-
-  async copyCapacityModifier(): Promise<void> {
-    const modifier = this.capacityModifierText();
-    if (!modifier) {
-      return;
-    }
-
-    try {
-      await navigator.clipboard.writeText(modifier);
-      this.temporaryCopyLabel.set(TEMPORARY_COPY_SUCCESS);
-      this.temporaryCopyStatus.set('Temporary modifier copied to clipboard.');
-    } catch {
-      this.temporaryCopyLabel.set(TEMPORARY_COPY_FAILURE);
-      this.temporaryCopyStatus.set(TEMPORARY_COPY_FAILURE);
     }
   }
 
   setCapacity(capacityId: CapacityId): void {
     this.sessionStore.setCapacity(capacityId);
-
-    // Clear stale temporary copy state when the visible modifier changes.
-    this.temporaryCopyLabel.set(TEMPORARY_COPY_IDLE);
-    this.temporaryCopyStatus.set('');
+    this.copyStatus.set('');
   }
 
   startOver(): void {

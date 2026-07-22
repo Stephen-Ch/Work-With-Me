@@ -1,6 +1,7 @@
 import rawMvpContent from '../../../assets/content/mvp-content.json';
 import { validateMvpContent } from './mvp-content.repository';
 import {
+  composeInstructionsForCopy,
   countWords,
   generateCapacityModifier,
   generatePermanentPrompt,
@@ -174,6 +175,28 @@ describe('mvp-generator', () => {
     );
   });
 
+  it('composes copy instructions with exact separator behavior', () => {
+    const permanentPrompt = 'line one\nline two\nline three';
+    const limitedModifier =
+      'For this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask.';
+    const veryLimitedModifier =
+      'For this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it.';
+
+    expect(composeInstructionsForCopy(permanentPrompt, null)).toBe(permanentPrompt);
+    expect(composeInstructionsForCopy(permanentPrompt, '')).toBe(permanentPrompt);
+
+    const limitedComposed = composeInstructionsForCopy(permanentPrompt, limitedModifier);
+    expect(limitedComposed).toBe(`${permanentPrompt}\n\n${limitedModifier}`);
+    expect(limitedComposed.endsWith('\n')).toBeFalse();
+    expect(limitedComposed.split(limitedModifier).length - 1).toBe(1);
+
+    const veryLimitedComposed = composeInstructionsForCopy(permanentPrompt, veryLimitedModifier);
+    expect(veryLimitedComposed).toBe(`${permanentPrompt}\n\n${veryLimitedModifier}`);
+    expect(veryLimitedComposed.endsWith('\n')).toBeFalse();
+
+    expect(permanentPrompt).toBe('line one\nline two\nline three');
+  });
+
   it('counts words canonically for edge cases', () => {
     expect(countWords('')).toBe(0);
     expect(countWords('   \t\n   ')).toBe(0);
@@ -289,9 +312,11 @@ describe('mvp-generator', () => {
         expect(rerender.segments).toEqual(baseResult.segments);
 
         const modifier = generateCapacityModifier(capacityId, content);
+        const composed = composeInstructionsForCopy(baseResult.prompt, modifier);
 
         if (capacityId === 'usual') {
           expect(modifier).toBeNull();
+          expect(composed).toBe(baseResult.prompt);
           continue;
         }
 
@@ -301,7 +326,14 @@ describe('mvp-generator', () => {
         const words = countWords(modifier as string);
         expect(words).withContext(`${capacityId} modifier word count`).toBeGreaterThanOrEqual(20);
         expect(words).withContext(`${capacityId} modifier word count`).toBeLessThanOrEqual(40);
+
+        expect(composed).toBe(`${baseResult.prompt}\n\n${modifier as string}`);
+        expect(composed.startsWith(baseResult.prompt)).toBeTrue();
+        expect(composed.endsWith(modifier as string)).toBeTrue();
+        expect(composed.endsWith('\n')).toBeFalse();
       }
+
+      expect(composeInstructionsForCopy(baseResult.prompt, null)).toBe(baseResult.prompt);
     }
 
     console.info(`[MVP] profile-capacity combinations validated: total=${combinations}`);

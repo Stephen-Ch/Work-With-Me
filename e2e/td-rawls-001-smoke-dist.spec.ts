@@ -182,11 +182,11 @@ test.describe('Work With Me smoke (dist server)', () => {
 
     expect(lines[2]).toBe(SHARED_CLOSING);
     await expect(page.getByTestId('capacity-fieldset')).toContainText('How much bandwidth do you have right now?');
-    await expect(page.getByTestId('capacity-modifier-preview')).toHaveCount(0);
-    await expect(page.getByTestId('capacity-copy-btn')).toHaveCount(0);
+    await expect(page.getByTestId('copy-btn')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Copy instructions' })).toHaveCount(1);
   });
 
-  test('td-rawls-001 capacity modifier flow is temporary, persistent, and independent', async ({ page }) => {
+  test('td-rawls-001 one-copy composed preview is temporary, persistent, and independent', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('start-btn').click();
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
@@ -199,41 +199,50 @@ test.describe('Work With Me smoke (dist server)', () => {
     }
 
     await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
-    const promptBefore = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
+    const toUnix = (value: string | null) => (value ?? '').replace(/\r\n/g, '\n');
+    const permanentOnly = toUnix(await page.getByTestId('document-preview').textContent());
+    expect(permanentOnly.length).toBeGreaterThan(0);
+    await expect(page.getByTestId('copy-btn')).toHaveCount(1);
 
     await expect(page.getByTestId('capacity-fieldset')).toContainText('How much bandwidth do you have right now?');
 
     await page.getByTestId('capacity-option-usual').focus();
+    await page.keyboard.press('Space');
+    await expect(page.getByTestId('capacity-option-usual')).toBeChecked();
     await page.keyboard.press('ArrowDown');
+    await expect(page.getByTestId('capacity-option-limited')).toBeFocused();
+    await page.keyboard.press('Space');
     await expect(page.getByTestId('capacity-option-limited')).toBeChecked();
+    await expect(page.getByTestId('document-preview')).toContainText(LIMITED_MODIFIER);
 
-    const limitedModifier = page.getByTestId('capacity-modifier-preview');
-    await expect(limitedModifier).toBeVisible();
-    await expect(limitedModifier).toContainText(LIMITED_MODIFIER);
+    const withLimited = toUnix(await page.getByTestId('document-preview').textContent());
+    expect(withLimited).toBe(`${permanentOnly}\n\n${LIMITED_MODIFIER}`);
+    await expect(page.getByTestId('copy-btn')).toHaveCount(1);
+    await expect(page.getByRole('button', { name: 'Copy instructions' })).toHaveCount(1);
 
-    const promptAfterLimited = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
-    expect(promptAfterLimited).toBe(promptBefore);
+    const copyStatus = page.getByTestId('copy-status');
+    await expect(copyStatus).toHaveCount(1);
 
     await page.reload();
     await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
     await expect(page.getByTestId('view-result')).toBeVisible({ timeout: 10_000 });
 
     await expect(page.getByTestId('capacity-option-limited')).toBeChecked();
-    await expect(page.getByTestId('capacity-modifier-preview')).toContainText(LIMITED_MODIFIER);
+    expect(toUnix(await page.getByTestId('document-preview').textContent())).toBe(`${permanentOnly}\n\n${LIMITED_MODIFIER}`);
 
-    await page.getByTestId('capacity-option-limited').focus();
-    await page.keyboard.press('ArrowDown');
+    await page.getByTestId('capacity-option-very-limited').click();
     await expect(page.getByTestId('capacity-option-very-limited')).toBeChecked();
-    await expect(page.getByTestId('capacity-modifier-preview')).toContainText(VERY_LIMITED_MODIFIER);
+    await expect(page.getByTestId('document-preview')).toContainText(VERY_LIMITED_MODIFIER);
+    const withVeryLimited = toUnix(await page.getByTestId('document-preview').textContent());
+    expect(withVeryLimited).toBe(`${permanentOnly}\n\n${VERY_LIMITED_MODIFIER}`);
+    expect(withVeryLimited.includes(`${LIMITED_MODIFIER}\n\n${VERY_LIMITED_MODIFIER}`)).toBe(false);
 
-    const promptAfterVeryLimited = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n').trim();
-    expect(promptAfterVeryLimited).toBe(promptBefore);
-
-    await page.getByTestId('capacity-option-very-limited').focus();
-    await page.keyboard.press('ArrowUp');
-    await page.keyboard.press('ArrowUp');
+    await page.getByTestId('capacity-option-usual').click();
     await expect(page.getByTestId('capacity-option-usual')).toBeChecked();
-    await expect(page.getByTestId('capacity-modifier-preview')).toHaveCount(0);
+    await expect(page.getByTestId('document-preview')).not.toContainText(LIMITED_MODIFIER);
+    await expect(page.getByTestId('document-preview')).not.toContainText(VERY_LIMITED_MODIFIER);
+    expect(toUnix(await page.getByTestId('document-preview').textContent())).toBe(permanentOnly);
+    await expect(page.getByTestId('copy-btn')).toHaveCount(1);
     await expect(page.getByTestId('capacity-copy-btn')).toHaveCount(0);
 
     await page.getByTestId('start-over-btn').click();
@@ -244,5 +253,29 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
     await expect(page.getByTestId('view-setup')).toBeVisible({ timeout: 10_000 });
     await expect(page.getByTestId('document-preview')).toHaveCount(0);
+  });
+
+  test('td-rawls-001 narrow viewport keeps one-copy composed preview usable', async ({ page }) => {
+    await page.setViewportSize({ width: 320, height: 740 });
+    await page.goto('/');
+    await page.getByTestId('start-btn').click();
+    await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
+
+    const answers = ['A', 'B', 'C', 'A', 'B'] as const;
+    for (let index = 0; index < answers.length; index++) {
+      await page.getByTestId(`option-${answers[index]}`).click();
+      await page.getByTestId('next-btn').click();
+    }
+
+    await expect(page).toHaveURL(/\/result$/, { timeout: 10_000 });
+    const permanentOnly = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n');
+
+    await page.getByTestId('capacity-option-limited').click();
+    await expect(page.getByTestId('capacity-option-limited')).toBeChecked();
+    await expect(page.getByTestId('document-preview')).toContainText(LIMITED_MODIFIER);
+
+    const composed = ((await page.getByTestId('document-preview').textContent()) ?? '').replace(/\r\n/g, '\n');
+    expect(composed).toBe(`${permanentOnly}\n\n${LIMITED_MODIFIER}`);
+    await expect(page.getByRole('button', { name: 'Copy instructions' })).toHaveCount(1);
   });
 });
