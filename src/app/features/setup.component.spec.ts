@@ -2,7 +2,6 @@ import { ComponentFixture, TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection, signal } from '@angular/core';
 import { provideRouter, Router } from '@angular/router';
 import {
-  LEGACY_SESSION_STORAGE_KEY,
   MVP_SESSION_NOW,
   MVP_SESSION_STORAGE_KEY,
   MvpSessionStore,
@@ -273,12 +272,30 @@ describe('SetupComponent', () => {
     expect(router.navigate).toHaveBeenCalledWith(['/result']);
   });
 
-  it('does not touch legacy key while running MVP setup flow', () => {
-    sessionStorage.setItem(LEGACY_SESSION_STORAGE_KEY, 'legacy');
-    const optionA = fixture.nativeElement.querySelector('[data-testid="option-A"]') as HTMLInputElement;
-    optionA.click();
-    fixture.detectChanges();
+  it('clears inherited legacy key while running MVP setup flow', async () => {
+    sessionStorage.setItem('wwm-session-v2', 'legacy');
 
-    expect(sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY)).toBe('legacy');
+    TestBed.resetTestingModule();
+    contentService = new MvpContentServiceStub();
+
+    await TestBed.configureTestingModule({
+      imports: [SetupComponent],
+      providers: [
+        provideZonelessChangeDetection(),
+        provideRouter([]),
+        {
+          provide: MVP_SESSION_NOW,
+          useValue: () => '2026-07-22T00:00:00.000Z',
+        },
+        { provide: MvpContentService, useValue: contentService },
+      ]
+    }).compileComponents();
+
+    fixture = TestBed.createComponent(SetupComponent);
+    component = fixture.componentInstance;
+    fixture.detectChanges();
+    await fixture.whenStable();
+
+    expect(sessionStorage.getItem('wwm-session-v2')).toBeNull();
   });
 });

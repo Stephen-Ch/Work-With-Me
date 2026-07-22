@@ -78,7 +78,7 @@ async function activateByKeyboard(page: import('@playwright/test').Page, testId:
 }
 
 test.describe('Work With Me smoke (dist server)', () => {
-  test('td-rawls-001 landing has enabled Start and no age gate', async ({ page }) => {
+  test('mvp-smoke-001 landing has enabled Start and no age gate', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
@@ -88,7 +88,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page.getByText(/13 or older/i)).toHaveCount(0);
   });
 
-  test('td-rawls-001 direct /result is guarded with no session', async ({ page }) => {
+  test('mvp-smoke-001 direct /result is guarded with no session', async ({ page }) => {
     await page.goto('/result');
     await page.waitForLoadState('domcontentloaded');
 
@@ -97,7 +97,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page.getByTestId('document-preview')).toHaveCount(0);
   });
 
-  test('td-rawls-001 keyboard completion covers question 1-5 and reaches result', async ({ page }) => {
+  test('mvp-smoke-001 keyboard completion covers question 1-5 and reaches result', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
@@ -119,7 +119,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page.getByTestId('document-preview')).toBeVisible({ timeout: 5_000 });
   });
 
-  test('td-rawls-001 keyboard back and replacement persist in final prompt', async ({ page }) => {
+  test('mvp-smoke-001 keyboard back and replacement persist in final prompt', async ({ page }) => {
     await page.goto('/');
     await page.waitForLoadState('domcontentloaded');
 
@@ -151,7 +151,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     expect(prompt).not.toContain(MODULE_SENTENCES['starting-work'].B);
   });
 
-  test('td-rawls-001 result prompt shape is deterministic and capacity starts unselected', async ({ page }) => {
+  test('mvp-smoke-001 result prompt shape is deterministic and capacity starts unselected', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('start-btn').click();
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
@@ -186,7 +186,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page.getByRole('button', { name: 'Copy instructions' })).toHaveCount(1);
   });
 
-  test('td-rawls-001 one-copy composed preview is temporary, persistent, and independent', async ({ page }) => {
+  test('mvp-smoke-001 one-copy composed preview is temporary, persistent, and independent', async ({ page }) => {
     await page.goto('/');
     await page.getByTestId('start-btn').click();
     await expect(page).toHaveURL(/\/setup$/, { timeout: 10_000 });
@@ -255,7 +255,7 @@ test.describe('Work With Me smoke (dist server)', () => {
     await expect(page.getByTestId('document-preview')).toHaveCount(0);
   });
 
-  test('td-rawls-001 narrow viewport keeps one-copy composed preview usable', async ({ page }) => {
+  test('mvp-smoke-001 narrow viewport keeps one-copy composed preview usable', async ({ page }) => {
     await page.setViewportSize({ width: 320, height: 740 });
     await page.goto('/');
     await page.getByTestId('start-btn').click();

@@ -2,7 +2,7 @@ import { Injectable, InjectionToken, computed, inject, signal } from '@angular/c
 import { CapacityId, MvpSessionV1, OptionCode, PermanentQuestionId, PermanentSelections } from './mvp.types';
 
 export const MVP_SESSION_STORAGE_KEY = 'wwm-mvp-session-v1';
-export const LEGACY_SESSION_STORAGE_KEY = 'wwm-session-v2';
+const LEGACY_SESSION_STORAGE_KEY = 'wwm-session-v2';
 
 const MVP_SCHEMA_VERSION = 1 as const;
 const MVP_FLOW = 'questionnaire' as const;
@@ -201,6 +201,13 @@ export class MvpSessionStore {
   }
 
   private hydrateFromStorage(): void {
+    // Remove inherited six-control session data to prevent stale state leaks.
+    try {
+      sessionStorage.removeItem(LEGACY_SESSION_STORAGE_KEY);
+    } catch {
+      // Ignore legacy-key cleanup failures.
+    }
+
     let raw: string | null = null;
 
     try {

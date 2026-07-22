@@ -9,7 +9,6 @@
     "e2e:dist": "npm run build && npx playwright test --config=playwright.dist.config.ts",
     "content:build": "node scripts/content-build.js",
     "content:lint": "node scripts/content-lint.js",
-    "content:export-app": "node ./scripts/content-export-app.js",
     "prebuild": "node scripts/content-build.js",
     "build": "ng build",
     "watch": "ng build --watch --configuration development",

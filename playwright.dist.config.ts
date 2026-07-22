@@ -2,13 +2,13 @@ import { defineConfig } from '@playwright/test';
 
 /**
  * Playwright config for running e2e tests against a pre-built static dist bundle.
- * This avoids the ng serve webServer hang issue (TD-RAWLS-001).
+ * This avoids the ng serve webServer hang issue for MVP dist acceptance.
  *
  * Usage: npm run e2e:dist
  */
 export default defineConfig({
   testDir: './e2e',
-  testMatch: ['**/td-rawls-001-*.spec.ts'], // Only run dist-specific smoke tests
+  testMatch: ['**/mvp-*-dist.spec.ts'],
   timeout: 60_000,
   retries: 0,
   use: {

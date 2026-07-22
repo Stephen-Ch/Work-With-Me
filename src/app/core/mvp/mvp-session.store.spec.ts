@@ -1,7 +1,6 @@
 import { TestBed } from '@angular/core/testing';
 import { provideZonelessChangeDetection } from '@angular/core';
 import {
-  LEGACY_SESSION_STORAGE_KEY,
   MVP_SESSION_NOW,
   MVP_SESSION_STORAGE_KEY,
   MvpSessionStore,
@@ -262,14 +261,14 @@ describe('MvpSessionStore', () => {
     }
   });
 
-  it('does not migrate or mutate the legacy key', () => {
-    sessionStorage.setItem(LEGACY_SESSION_STORAGE_KEY, JSON.stringify({ v: 2, answers: { 'load-q1': 'A' } }));
+  it('clears inherited legacy key on boot and does not migrate it', () => {
+    sessionStorage.setItem('wwm-session-v2', JSON.stringify({ v: 2, answers: { 'load-q1': 'A' } }));
 
     const store = bootStore();
 
     expect(store.session()).toBeNull();
     expect(sessionStorage.getItem(MVP_SESSION_STORAGE_KEY)).toBeNull();
-    expect(sessionStorage.getItem(LEGACY_SESSION_STORAGE_KEY)).toBeTruthy();
+    expect(sessionStorage.getItem('wwm-session-v2')).toBeNull();
   });
 
   it('records each permanent answer and persists complete valid session', () => {
