@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "packetId": "chatgpt-C03-B",
+  "platform": "chatgpt",
+  "caseId": "C03",
+  "caseTitle": "Vague writing request",
+  "blindedLabel": "B",
+  "profileId": "C",
+  "capacity": "none",
+  "messageOrder": [
+    {
+      "step": 1,
+      "type": "instruction",
+      "text": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.\nGive the broader picture first, then recommend where to start. Provide fuller context in a clear, scannable structure. Ask one question first only when missing information could materially change the recommendation. Briefly park useful side topics, then return to the current task. Reconstruct key decisions, open questions, and the next step before continuing.\nMy explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result."
+    },
+    {
+      "step": 2,
+      "type": "prompt",
+      "text": "Help me write an update about our project."
+    }
+  ],
+  "destinationRawFile": "docs/validation/runs/wwm-effectiveness-v2-2026-07/raw/chatgpt/chatgpt-C03-B.md",
+  "collectionMetadataTemplate": {
+    "platform": "chatgpt",
+    "modelLabel": "",
+    "localDateTime": "",
+    "packetId": "chatgpt-C03-B",
+    "caseId": "C03",
+    "blindedLabel": "B",
+    "webEnabled": "yes/no",
+    "toolsEnabled": "yes/no",
+    "memoryOrCustomInstructionsDisabled": "yes/no/unknown",
+    "responseRegenerated": "no",
+    "technicalError": "yes/no",
+    "retryReference": "",
+    "collectorNotes": ""
+  }
+}

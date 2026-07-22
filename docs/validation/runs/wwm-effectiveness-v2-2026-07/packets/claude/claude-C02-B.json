@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "packetId": "claude-C02-B",
+  "platform": "claude",
+  "caseId": "C02",
+  "caseTitle": "Clear coding request",
+  "blindedLabel": "B",
+  "profileId": "A",
+  "capacity": "limited",
+  "messageOrder": [
+    {
+      "step": 1,
+      "type": "instruction",
+      "text": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.\nGive one clear first step before any deeper explanation. For broad or open-ended requests that don't ask for full detail, answer in 5 bullet points or fewer, under 100 words total, then stop -- no numbered multi-section framework -- and expand only the part I'm asked about next. Recommend one option and explain why it is the best fit. Keep me on the current task and flag drift clearly. Give a brief recap, then provide the next step.\nMy explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result.\n\nFor this session, keep responses compact and practical. Give the smallest useful answer first, trim optional detail, and expand only if I ask."
+    },
+    {
+      "step": 2,
+      "type": "prompt",
+      "text": "Write a TypeScript function parseQuery(input: string) that returns Record<string,string> from query text like a=1&b=two. Ignore malformed pairs and include 3 short tests."
+    }
+  ],
+  "destinationRawFile": "docs/validation/runs/wwm-effectiveness-v2-2026-07/raw/claude/claude-C02-B.md",
+  "collectionMetadataTemplate": {
+    "platform": "claude",
+    "modelLabel": "",
+    "localDateTime": "",
+    "packetId": "claude-C02-B",
+    "caseId": "C02",
+    "blindedLabel": "B",
+    "webEnabled": "yes/no",
+    "toolsEnabled": "yes/no",
+    "memoryOrCustomInstructionsDisabled": "yes/no/unknown",
+    "responseRegenerated": "no",
+    "technicalError": "yes/no",
+    "retryReference": "",
+    "collectorNotes": ""
+  }
+}

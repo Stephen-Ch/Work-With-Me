@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "gitCommitSha": "62e99ddeea5ba0bfe95eab5c861045451f36972d",
+  "dateCreatedIso": "2026-07-22T21:36:49.207Z",
+  "frozenBeforeCollection": true,
+  "fileSha256": {
+    "casesJson": "2223e5a5c892496505816899fb9f4913b80372b8b0ae33275b148da8e87bf010",
+    "conditionsJson": "f1de3ee440ef436a0a29575b047f512a253a3941771a58449bc3dadd1588b573",
+    "productionContentJson": "19d122eedea93cc0cb0fa5cfd806e50eba89a8043675de0cb5d28f4947947782"
+  },
+  "exactCandidateWording": "For broad or open-ended requests that don't ask for full detail, answer in 5 bullet points or fewer, under 100 words total, then stop -- no numbered multi-section framework -- and expand only the part I'm asked about next.",
+  "fixedRandomizationSeed": 20260722,
+  "intendedPlatforms": [
+    "chatgpt",
+    "claude"
+  ],
+  "intendedModels": {
+    "chatgpt": "",
+    "claude": ""
+  },
+  "expectedRawRunCount": 48,
+  "expectedScoringCount": {
+    "perResponseRecords": 48,
+    "perCaseComparisonRecords": 16
+  },
+  "passCriteriaReference": "docs/validation/MVP-EFFECTIVENESS-GATE-V2.md#Pass Bar (predefined)",
+  "criteriaFrozenStatement": "Cases, prompts, conditions, candidate wording, pass criteria, and seed were frozen before output collection.",
+  "constraints": {
+    "noProductionPromptMutation": true,
+    "noExternalApiCallsAdded": true,
+    "noSyntheticOutputs": true,
+    "noAnswerKeyInTrackedPath": true
+  },
+  "validationSummary": {
+    "entries": 16,
+    "platformCaseCount": 16
+  }
+}

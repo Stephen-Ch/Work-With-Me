@@ -1,0 +1,19 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "validatedAtIso": "2026-07-22T21:36:49.207Z",
+  "checks": {
+    "expectedRunCount": 48,
+    "platformCaseGroups": 16,
+    "labelsPerGroup": "A,B,C exactly once",
+    "trueConditionsPerGroup": "WITHOUT,CURRENT,CANDIDATE_HARD_CAP exactly once",
+    "promptIdentityAcrossConditions": true,
+    "candidateDiffRule": "diff only when profile uses Q2-A",
+    "withoutInstructionRule": true,
+    "noConditionLeakInPacketId": true,
+    "noPrefilledRawOutputs": true
+  },
+  "summary": {
+    "entries": 16,
+    "platformCaseCount": 16
+  }
+}

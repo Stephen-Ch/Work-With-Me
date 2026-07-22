@@ -46,3 +46,6 @@ Thumbs.db
 dist/content.json
 artifacts/
 test-results/
+
+# Local-only evaluation artifacts (answer keys, private run state)
+/.local/

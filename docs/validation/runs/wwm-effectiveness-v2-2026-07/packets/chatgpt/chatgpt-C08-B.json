@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "packetId": "chatgpt-C08-B",
+  "platform": "chatgpt",
+  "caseId": "C08",
+  "caseTitle": "Interrupted-project resumption",
+  "blindedLabel": "B",
+  "profileId": "C",
+  "capacity": "none",
+  "messageOrder": [
+    {
+      "step": 1,
+      "type": "instruction",
+      "text": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.\nGive the broader picture first, then recommend where to start. Provide fuller context in a clear, scannable structure. Ask one question first only when missing information could materially change the recommendation. Briefly park useful side topics, then return to the current task. Reconstruct key decisions, open questions, and the next step before continuing.\nMy explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result."
+    },
+    {
+      "step": 2,
+      "type": "prompt",
+      "text": "We paused our migration plan two weeks ago. Resume from where we likely left off and tell me the next action."
+    }
+  ],
+  "destinationRawFile": "docs/validation/runs/wwm-effectiveness-v2-2026-07/raw/chatgpt/chatgpt-C08-B.md",
+  "collectionMetadataTemplate": {
+    "platform": "chatgpt",
+    "modelLabel": "",
+    "localDateTime": "",
+    "packetId": "chatgpt-C08-B",
+    "caseId": "C08",
+    "blindedLabel": "B",
+    "webEnabled": "yes/no",
+    "toolsEnabled": "yes/no",
+    "memoryOrCustomInstructionsDisabled": "yes/no/unknown",
+    "responseRegenerated": "no",
+    "technicalError": "yes/no",
+    "retryReference": "",
+    "collectorNotes": ""
+  }
+}

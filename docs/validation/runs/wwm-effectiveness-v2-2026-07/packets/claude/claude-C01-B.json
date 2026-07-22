@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "packetId": "claude-C01-B",
+  "platform": "claude",
+  "caseId": "C01",
+  "caseTitle": "Clear writing request",
+  "blindedLabel": "B",
+  "profileId": "A",
+  "capacity": "none",
+  "messageOrder": [
+    {
+      "step": 1,
+      "type": "instruction",
+      "text": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.\nGive one clear first step before any deeper explanation. For broad or open-ended requests that don't ask for full detail, answer in 5 bullet points or fewer, under 100 words total, then stop -- no numbered multi-section framework -- and expand only the part I'm asked about next. Recommend one option and explain why it is the best fit. Keep me on the current task and flag drift clearly. Give a brief recap, then provide the next step.\nMy explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result."
+    },
+    {
+      "step": 2,
+      "type": "prompt",
+      "text": "Write a 120-word release note for a bug fix where search now preserves filters after refresh. Audience: customer admins. Include impact and no hype."
+    }
+  ],
+  "destinationRawFile": "docs/validation/runs/wwm-effectiveness-v2-2026-07/raw/claude/claude-C01-B.md",
+  "collectionMetadataTemplate": {
+    "platform": "claude",
+    "modelLabel": "",
+    "localDateTime": "",
+    "packetId": "claude-C01-B",
+    "caseId": "C01",
+    "blindedLabel": "B",
+    "webEnabled": "yes/no",
+    "toolsEnabled": "yes/no",
+    "memoryOrCustomInstructionsDisabled": "yes/no/unknown",
+    "responseRegenerated": "no",
+    "technicalError": "yes/no",
+    "retryReference": "",
+    "collectorNotes": ""
+  }
+}

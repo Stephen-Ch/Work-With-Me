@@ -1,0 +1,39 @@
+{
+  "runId": "wwm-effectiveness-v2-2026-07",
+  "protocolVersion": "mvp-effectiveness-gate-v2",
+  "packetId": "chatgpt-C07-B",
+  "platform": "chatgpt",
+  "caseId": "C07",
+  "caseTitle": "Decision with one material missing fact",
+  "blindedLabel": "B",
+  "profileId": "A",
+  "capacity": "very-limited",
+  "messageOrder": [
+    {
+      "step": 1,
+      "type": "instruction",
+      "text": "Use these preferences when they are relevant. Answer normally when my request is already clear and specific.\nGive one clear first step before any deeper explanation. Keep responses brief and focus on essentials unless I ask for more. Recommend one option and explain why it is the best fit. Keep me on the current task and flag drift clearly. Give a brief recap, then provide the next step.\nMy explicit request overrides these defaults. When key information is missing, state a reasonable assumption and continue. Ask one question only when the answer would materially change the result.\n\nFor this session, use essentials-only responses. Give one actionable step at a time, avoid extra options by default, and add depth only if I request it."
+    },
+    {
+      "step": 2,
+      "type": "prompt",
+      "text": "Should we host our API on provider X or Y for a product launching in 6 weeks? We need high uptime and low ops burden."
+    }
+  ],
+  "destinationRawFile": "docs/validation/runs/wwm-effectiveness-v2-2026-07/raw/chatgpt/chatgpt-C07-B.md",
+  "collectionMetadataTemplate": {
+    "platform": "chatgpt",
+    "modelLabel": "",
+    "localDateTime": "",
+    "packetId": "chatgpt-C07-B",
+    "caseId": "C07",
+    "blindedLabel": "B",
+    "webEnabled": "yes/no",
+    "toolsEnabled": "yes/no",
+    "memoryOrCustomInstructionsDisabled": "yes/no/unknown",
+    "responseRegenerated": "no",
+    "technicalError": "yes/no",
+    "retryReference": "",
+    "collectorNotes": ""
+  }
+}
